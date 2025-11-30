@@ -112,8 +112,7 @@ function createRentDueDate(monthStart: Date, dayOfMonthRentDue: number): Date {
     const lastDayOfMonth = getLastDayOfMonth(year, month);
     const dayToUse = dayOfMonthRentDue > lastDayOfMonth ? lastDayOfMonth : dayOfMonthRentDue;
     rentDueDate.setDate(dayToUse);
-    rentDueDate.setHours(0, 0, 0, 0);
-    return rentDueDate;
+    return normalizeDate(rentDueDate);
 }
 
 /**
