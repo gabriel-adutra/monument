@@ -98,8 +98,7 @@ const result = calculateMonthlyRent(baseMonthlyRent,
         rentDueDate: new Date("2023-03-01T00:00:00")
     },
     <!--
-    Gabriel: Note: In the example above, April should not be included since it is outside the `windowEndDate` (March). 
-    Also, if it were included, the correct rent would be 121 (applying the 10% increase on 110), not 120 as shown.
+    Gabriel: Note: In the example above, April should not be included since it is outside the `windowEndDate` (March).
     -->
     {
         vacancy: false,
