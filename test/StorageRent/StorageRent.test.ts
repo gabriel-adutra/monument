@@ -234,4 +234,43 @@ describe("calculateMonthlyRent function", () => {
 
         expect(result).toEqual(expectedResult);
     });
+
+    it("should generate payment on first day of lease when lease starts after due date (README linha 16)", () => {
+        // Teste: "Rent is due on the first day of a tenant's lease"
+        // Quando lease começa depois do vencimento no mesmo mês, deve gerar registro no dia do lease
+        // Exemplo: vencimento dia 15, lease começa dia 20
+        const baseMonthlyRent = 100.00;
+        const leaseStartDate = new Date("2023-01-20T00:00:00"); // Lease começa dia 20
+        const windowStartDate = new Date("2023-01-01T00:00:00");
+        const windowEndDate = new Date("2023-03-31T00:00:00");
+        const dayOfMonthRentDue = 15; // Vencimento dia 15
+        const rentRateChangeFrequency = 1;
+        const rentChangeRate = 0;
+
+        const result = calculateMonthlyRent(baseMonthlyRent,
+            leaseStartDate, windowStartDate, windowEndDate, 
+            dayOfMonthRentDue, rentRateChangeFrequency, rentChangeRate);
+
+        // Deve gerar registro no dia 20 (primeiro dia do lease) com valor integral
+        // E depois os registros mensais normais no dia 15
+        let expectedResult = [
+            {
+                vacancy: false,
+                rentAmount: 100.00, // Valor integral no primeiro dia do lease
+                rentDueDate: new Date("2023-01-20T00:00:00") // Primeiro dia do lease
+            },
+            {
+                vacancy: false,
+                rentAmount: 100.00,
+                rentDueDate: new Date("2023-02-15T00:00:00") // Próximo vencimento normal
+            },
+            {
+                vacancy: false,
+                rentAmount: 100.00,
+                rentDueDate: new Date("2023-03-15T00:00:00") // Próximo vencimento normal
+            }
+        ];
+
+        expect(result).toEqual(expectedResult);
+    });
 });

@@ -42,12 +42,12 @@ export function calculateMonthlyRent(baseMonthlyRent: number, leaseStartDate: Da
     const leaseMonth = normalizedLeaseStart.getMonth();
     const leaseDay = normalizedLeaseStart.getDate();
     
-    // Verificar se lease está dentro da janela e antes do dia de vencimento
+    // Verificar se lease está dentro da janela
     if (normalizedLeaseStart >= windowStartDate && normalizedLeaseStart <= windowEndDate) {
         const firstMonthRentDueDate = new Date(leaseYear, leaseMonth, dayOfMonthRentDue);
         firstMonthRentDueDate.setHours(0, 0, 0, 0);
         
-        // Se lease começa antes do dia de vencimento no mesmo mês
+        // Se lease começa antes do dia de vencimento no mesmo mês - proratação
         if (leaseDay < dayOfMonthRentDue && normalizedLeaseStart < firstMonthRentDueDate) {
             // Calcular proratação: monthly_rent * (dayOfMonthRentDue - leaseDay) / 30
             const proratedAmount = (currentRent * (dayOfMonthRentDue - leaseDay)) / 30;
@@ -56,6 +56,18 @@ export function calculateMonthlyRent(baseMonthlyRent: number, leaseStartDate: Da
             monthlyRentRecords.push({
                 vacancy: false, // Lease já começou, então não está vazio
                 rentAmount: roundedProratedAmount,
+                rentDueDate: new Date(normalizedLeaseStart)
+            });
+        }
+        
+        // Se lease começa depois do dia de vencimento no mesmo mês - primeiro pagamento no dia do lease
+        if (leaseDay > dayOfMonthRentDue && normalizedLeaseStart > firstMonthRentDueDate) {
+            // Primeiro pagamento no primeiro dia do lease com valor integral
+            const rentAmount = Math.round(currentRent * 100) / 100;
+            
+            monthlyRentRecords.push({
+                vacancy: false, // Lease já começou, então não está vazio
+                rentAmount: rentAmount,
                 rentDueDate: new Date(normalizedLeaseStart)
             });
         }
@@ -81,35 +93,43 @@ export function calculateMonthlyRent(baseMonthlyRent: number, leaseStartDate: Da
         
         // Verificar se a data de vencimento está dentro da janela
         if (rentDueDate >= windowStartDate && rentDueDate <= windowEndDate) {
-            // Calcular vacância: vacancy = true se rentDueDate < leaseStartDate
-            const vacancy = rentDueDate < normalizedLeaseStart;
+            // Verificar se lease começa depois do vencimento no mesmo mês
+            // Se sim, não gerar registro do vencimento (já foi gerado no primeiro dia do lease)
+            const isSameMonthAsLease = rentDueDate.getFullYear() === normalizedLeaseStart.getFullYear() &&
+                                      rentDueDate.getMonth() === normalizedLeaseStart.getMonth();
+            const leaseStartsAfterDueDate = normalizedLeaseStart > rentDueDate;
             
-            // Verificar se a rent deve mudar neste mês
-            // Mudanças ocorrem a cada rentRateChangeFrequency meses a partir de rentChangeBaseDate
-            const monthsSinceBase = (currentDate.getFullYear() - rentChangeBaseDate.getFullYear()) * 12 + 
-                                    (currentDate.getMonth() - rentChangeBaseDate.getMonth());
-            
-            // Aplicar mudança de rent apenas se as regras permitirem:
-            // - Aumento (rentChangeRate > 0) só quando ocupado (vacancy = false)
-            // - Diminuição (rentChangeRate < 0) só quando vazio (vacancy = true)
-            if (monthsSinceBase > 0 && monthsSinceBase % rentRateChangeFrequency === 0) {
-                const canIncrease = rentChangeRate > 0 && !vacancy;
-                const canDecrease = rentChangeRate < 0 && vacancy;
+            if (!(isSameMonthAsLease && leaseStartsAfterDueDate)) {
+                // Calcular vacância: vacancy = true se rentDueDate < leaseStartDate
+                const vacancy = rentDueDate < normalizedLeaseStart;
                 
-                if (canIncrease || canDecrease) {
-                    currentRent = calculateNewMonthlyRent(currentRent, rentChangeRate);
+                // Verificar se a rent deve mudar neste mês
+                // Mudanças ocorrem a cada rentRateChangeFrequency meses a partir de rentChangeBaseDate
+                const monthsSinceBase = (currentDate.getFullYear() - rentChangeBaseDate.getFullYear()) * 12 + 
+                                        (currentDate.getMonth() - rentChangeBaseDate.getMonth());
+                
+                // Aplicar mudança de rent apenas se as regras permitirem:
+                // - Aumento (rentChangeRate > 0) só quando ocupado (vacancy = false)
+                // - Diminuição (rentChangeRate < 0) só quando vazio (vacancy = true)
+                if (monthsSinceBase > 0 && monthsSinceBase % rentRateChangeFrequency === 0) {
+                    const canIncrease = rentChangeRate > 0 && !vacancy;
+                    const canDecrease = rentChangeRate < 0 && vacancy;
+                    
+                    if (canIncrease || canDecrease) {
+                        currentRent = calculateNewMonthlyRent(currentRent, rentChangeRate);
+                    }
+                    // Se não pode aumentar nem diminuir, mantém currentRent atual
                 }
-                // Se não pode aumentar nem diminuir, mantém currentRent atual
+                
+                // Usar currentRent como rentAmount
+                const rentAmount = Math.round(currentRent * 100) / 100; // Arredondar para 2 casas decimais
+                
+                monthlyRentRecords.push({
+                    vacancy: vacancy,
+                    rentAmount: rentAmount,
+                    rentDueDate: new Date(rentDueDate)
+                });
             }
-            
-            // Usar currentRent como rentAmount
-            const rentAmount = Math.round(currentRent * 100) / 100; // Arredondar para 2 casas decimais
-            
-            monthlyRentRecords.push({
-                vacancy: vacancy,
-                rentAmount: rentAmount,
-                rentDueDate: new Date(rentDueDate)
-            });
         }
         
         // Avançar para o próximo mês
