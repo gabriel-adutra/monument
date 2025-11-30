@@ -68,16 +68,6 @@ export function calculateMonthlyRent(baseMonthlyRent: number, leaseStartDate: Da
     
     // Iterar pelos meses até o final da janela
     while (currentDate <= windowEndDate) {
-        // Verificar se a rent deve mudar neste mês
-        // Mudanças ocorrem a cada rentRateChangeFrequency meses a partir de rentChangeBaseDate
-        const monthsSinceBase = (currentDate.getFullYear() - rentChangeBaseDate.getFullYear()) * 12 + 
-                                (currentDate.getMonth() - rentChangeBaseDate.getMonth());
-        
-        // Se passou pelo menos uma frequência desde a última mudança, aplicar nova mudança
-        if (monthsSinceBase > 0 && monthsSinceBase % rentRateChangeFrequency === 0) {
-            currentRent = calculateNewMonthlyRent(currentRent, rentChangeRate);
-        }
-        
         // Criar data de vencimento para este mês
         const rentDueDate = new Date(currentDate);
         const year = rentDueDate.getFullYear();
@@ -92,7 +82,25 @@ export function calculateMonthlyRent(baseMonthlyRent: number, leaseStartDate: Da
         // Verificar se a data de vencimento está dentro da janela
         if (rentDueDate >= windowStartDate && rentDueDate <= windowEndDate) {
             // Calcular vacância: vacancy = true se rentDueDate < leaseStartDate
-            const vacancy = rentDueDate < leaseStartDate;
+            const vacancy = rentDueDate < normalizedLeaseStart;
+            
+            // Verificar se a rent deve mudar neste mês
+            // Mudanças ocorrem a cada rentRateChangeFrequency meses a partir de rentChangeBaseDate
+            const monthsSinceBase = (currentDate.getFullYear() - rentChangeBaseDate.getFullYear()) * 12 + 
+                                    (currentDate.getMonth() - rentChangeBaseDate.getMonth());
+            
+            // Aplicar mudança de rent apenas se as regras permitirem:
+            // - Aumento (rentChangeRate > 0) só quando ocupado (vacancy = false)
+            // - Diminuição (rentChangeRate < 0) só quando vazio (vacancy = true)
+            if (monthsSinceBase > 0 && monthsSinceBase % rentRateChangeFrequency === 0) {
+                const canIncrease = rentChangeRate > 0 && !vacancy;
+                const canDecrease = rentChangeRate < 0 && vacancy;
+                
+                if (canIncrease || canDecrease) {
+                    currentRent = calculateNewMonthlyRent(currentRent, rentChangeRate);
+                }
+                // Se não pode aumentar nem diminuir, mantém currentRent atual
+            }
             
             // Usar currentRent como rentAmount
             const rentAmount = Math.round(currentRent * 100) / 100; // Arredondar para 2 casas decimais
