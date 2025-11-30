@@ -342,4 +342,43 @@ describe("calculateMonthlyRent function", () => {
 
         expect(result).toEqual(expectedResult);
     });
+
+    it("should apply rent change on next due date when change occurs between due dates (README linha 37)", () => {
+        // Teste: "If the rent price changes between the previous due date and the next due date, 
+        // then the new rent price will go into effect on the next due date."
+        // Mudança calculada no mês X, mas novo valor só usado a partir do mês X+1
+        const baseMonthlyRent = 100.00;
+        const leaseStartDate = new Date("2023-01-01T00:00:00");
+        const windowStartDate = new Date("2023-01-01T00:00:00");
+        const windowEndDate = new Date("2023-03-31T00:00:00");
+        const dayOfMonthRentDue = 1;
+        const rentRateChangeFrequency = 1; // Mudança a cada mês
+        const rentChangeRate = 0.1; // Aumento de 10%
+
+        const result = calculateMonthlyRent(baseMonthlyRent,
+            leaseStartDate, windowStartDate, windowEndDate, 
+            dayOfMonthRentDue, rentRateChangeFrequency, rentChangeRate);
+
+        // Mudança calculada em janeiro (mês 1), mas novo valor (110) só usado em fevereiro
+        // Mudança calculada em fevereiro (mês 2), mas novo valor (121) só usado em março
+        let expectedResult = [
+            {
+                vacancy: false,
+                rentAmount: 100.00, // Janeiro: valor antigo (mudança calculada mas não aplicada ainda)
+                rentDueDate: new Date("2023-01-01T00:00:00")
+            },
+            {
+                vacancy: false,
+                rentAmount: 110.00, // Fevereiro: novo valor entra em vigor (mudança de jan aplicada)
+                rentDueDate: new Date("2023-02-01T00:00:00")
+            },
+            {
+                vacancy: false,
+                rentAmount: 121.00, // Março: novo valor entra em vigor (mudança de fev aplicada)
+                rentDueDate: new Date("2023-03-01T00:00:00")
+            }
+        ];
+
+        expect(result).toEqual(expectedResult);
+    });
 });
