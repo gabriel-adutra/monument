@@ -175,4 +175,63 @@ describe("calculateMonthlyRent function", () => {
 
         expect(result).toEqual(expectedResult);
     });
+
+    it("should change rent every X months based on rentRateChangeFrequency (README linha 33)", () => {
+        // Teste: mudanças de rent a cada 2 meses (frequência > 1)
+        // Exemplo do README: se window start date is 3/15 and we're changing rent every 2 months, 
+        // the first change would occur on 5/1, then 7/1 and so on
+        const baseMonthlyRent = 100.00;
+        const leaseStartDate = new Date("2023-01-01T00:00:00");
+        const windowStartDate = new Date("2023-01-01T00:00:00");
+        const windowEndDate = new Date("2023-06-30T00:00:00");
+        const dayOfMonthRentDue = 1;
+        const rentRateChangeFrequency = 2; // A cada 2 meses
+        const rentChangeRate = 0.1; // Aumento de 10%
+
+        const result = calculateMonthlyRent(baseMonthlyRent,
+            leaseStartDate, windowStartDate, windowEndDate, 
+            dayOfMonthRentDue, rentRateChangeFrequency, rentChangeRate);
+
+        // Mudanças devem ocorrer a cada 2 meses:
+        // - Janeiro (mês 0): 100 (sem mudança)
+        // - Fevereiro (mês 1): 100 (sem mudança, 1 % 2 != 0)
+        // - Março (mês 2): 110 (mudança, 2 % 2 == 0)
+        // - Abril (mês 3): 110 (sem mudança, 3 % 2 != 0)
+        // - Maio (mês 4): 121 (mudança, 4 % 2 == 0)
+        // - Junho (mês 5): 121 (sem mudança, 5 % 2 != 0)
+        let expectedResult = [
+            {
+                vacancy: false,
+                rentAmount: 100.00,
+                rentDueDate: new Date("2023-01-01T00:00:00")
+            },
+            {
+                vacancy: false,
+                rentAmount: 100.00,
+                rentDueDate: new Date("2023-02-01T00:00:00")
+            },
+            {
+                vacancy: false,
+                rentAmount: 110.00, // Primeira mudança (mês 2)
+                rentDueDate: new Date("2023-03-01T00:00:00")
+            },
+            {
+                vacancy: false,
+                rentAmount: 110.00,
+                rentDueDate: new Date("2023-04-01T00:00:00")
+            },
+            {
+                vacancy: false,
+                rentAmount: 121.00, // Segunda mudança (mês 4)
+                rentDueDate: new Date("2023-05-01T00:00:00")
+            },
+            {
+                vacancy: false,
+                rentAmount: 121.00,
+                rentDueDate: new Date("2023-06-01T00:00:00")
+            }
+        ];
+
+        expect(result).toEqual(expectedResult);
+    });
 });
