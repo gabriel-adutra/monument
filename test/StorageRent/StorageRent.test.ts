@@ -492,4 +492,191 @@ describe("calculateMonthlyRent function", () => {
         // mas isso quebraria os testes originais fornecidos.
         expect(result).toEqual(expectedResult);
     });
+
+    // ============================================================================
+    // TESTES DE PRIORIDADE ALTA: Casos essenciais que faltavam
+    // ============================================================================
+
+    it("should decrease rent when unit is vacant (rentChangeRate negative)", () => {
+        // README linha 39: "Rent can only increase when the unit is rented and can only decrease while it is vacant."
+        // Teste: taxa negativa quando vazio DEVE diminuir o rent
+        const baseMonthlyRent = 100.00;
+        const leaseStartDate = new Date("2023-04-01T00:00:00"); // Lease começa depois da janela
+        const windowStartDate = new Date("2023-01-01T00:00:00");
+        const windowEndDate = new Date("2023-03-31T00:00:00");
+        const dayOfMonthRentDue = 1;
+        const rentRateChangeFrequency = 1;
+        const rentChangeRate = -0.1; // Diminuição de 10%
+
+        const result = calculateMonthlyRent(baseMonthlyRent,
+            leaseStartDate, windowStartDate, windowEndDate, 
+            dayOfMonthRentDue, rentRateChangeFrequency, rentChangeRate);
+
+        // Rent DEVE diminuir porque unidade está vazia (vacancy = true)
+        // Janeiro: 100 (sem mudança ainda)
+        // Fevereiro: 90 (100 * 0.9 = 90, diminuição aplicada)
+        // Março: 81 (90 * 0.9 = 81, diminuição cumulativa aplicada)
+        let expectedResult = [
+            {
+                vacancy: true,
+                rentAmount: 100.00, // Janeiro: sem mudança ainda
+                rentDueDate: new Date("2023-01-01T00:00:00")
+            },
+            {
+                vacancy: true,
+                rentAmount: 90.00, // Fevereiro: diminuição aplicada (100 * 0.9 = 90)
+                rentDueDate: new Date("2023-02-01T00:00:00")
+            },
+            {
+                vacancy: true,
+                rentAmount: 81.00, // Março: diminuição cumulativa aplicada (90 * 0.9 = 81)
+                rentDueDate: new Date("2023-03-01T00:00:00")
+            }
+        ];
+
+        expect(result).toEqual(expectedResult);
+    });
+
+    it("should handle leap year correctly (February with 29 days)", () => {
+        // Teste: ano bissexto (2024) - fevereiro tem 29 dias
+        // Se dayOfMonthRentDue = 29, deve usar dia 29 de fevereiro (não dia 28)
+        const baseMonthlyRent = 100.00;
+        const leaseStartDate = new Date("2024-01-01T00:00:00");
+        const windowStartDate = new Date("2024-02-01T00:00:00");
+        const windowEndDate = new Date("2024-02-29T00:00:00");
+        const dayOfMonthRentDue = 29; // Dia 29 existe em fevereiro de 2024 (ano bissexto)
+        const rentRateChangeFrequency = 1;
+        const rentChangeRate = 0;
+
+        const result = calculateMonthlyRent(baseMonthlyRent,
+            leaseStartDate, windowStartDate, windowEndDate, 
+            dayOfMonthRentDue, rentRateChangeFrequency, rentChangeRate);
+
+        // Deve usar dia 29 de fevereiro (ano bissexto), não dia 28
+        let expectedResult = [
+            {
+                vacancy: false,
+                rentAmount: 100.00,
+                rentDueDate: new Date("2024-02-29T00:00:00") // Dia 29 existe em fevereiro bissexto
+            }
+        ];
+
+        expect(result).toEqual(expectedResult);
+    });
+
+    it("should round rent amount to two decimal places correctly", () => {
+        // Teste: arredondamento para 2 casas decimais
+        // Usando valores que resultam em mais de 2 casas decimais
+        // Exemplo: 100 * 1.333... = 133.333... deve ser 133.33
+        const baseMonthlyRent = 100.00;
+        const leaseStartDate = new Date("2023-01-01T00:00:00");
+        const windowStartDate = new Date("2023-01-01T00:00:00");
+        const windowEndDate = new Date("2023-03-31T00:00:00");
+        const dayOfMonthRentDue = 1;
+        const rentRateChangeFrequency = 1;
+        const rentChangeRate = 0.333333; // Aumento de 33.3333% (resulta em valores com muitas casas decimais)
+
+        const result = calculateMonthlyRent(baseMonthlyRent,
+            leaseStartDate, windowStartDate, windowEndDate, 
+            dayOfMonthRentDue, rentRateChangeFrequency, rentChangeRate);
+
+        // Valores devem ser arredondados para 2 casas decimais
+        // Janeiro: 100.00
+        // Fevereiro: 100 * 1.333333 = 133.3333 → 133.33
+        // Março: 133.3333 * 1.333333 = 177.7777 → 177.78 (arredondamento)
+        let expectedResult = [
+            {
+                vacancy: false,
+                rentAmount: 100.00,
+                rentDueDate: new Date("2023-01-01T00:00:00")
+            },
+            {
+                vacancy: false,
+                rentAmount: 133.33, // 100 * 1.333333 = 133.3333 → arredondado para 133.33
+                rentDueDate: new Date("2023-02-01T00:00:00")
+            },
+            {
+                vacancy: false,
+                rentAmount: 177.78, // 133.3333 * 1.333333 = 177.7777 → arredondado para 177.78
+                rentDueDate: new Date("2023-03-01T00:00:00")
+            }
+        ];
+
+        expect(result).toEqual(expectedResult);
+    });
+
+    it("should change rent every 3 months based on rentRateChangeFrequency", () => {
+        // Teste: frequência = 3 meses (validação adicional além da frequência = 2)
+        const baseMonthlyRent = 100.00;
+        const leaseStartDate = new Date("2023-01-01T00:00:00");
+        const windowStartDate = new Date("2023-01-01T00:00:00");
+        const windowEndDate = new Date("2023-09-30T00:00:00");
+        const dayOfMonthRentDue = 1;
+        const rentRateChangeFrequency = 3; // A cada 3 meses
+        const rentChangeRate = 0.1; // Aumento de 10%
+
+        const result = calculateMonthlyRent(baseMonthlyRent,
+            leaseStartDate, windowStartDate, windowEndDate, 
+            dayOfMonthRentDue, rentRateChangeFrequency, rentChangeRate);
+
+        // Mudanças devem ocorrer a cada 3 meses:
+        // - Janeiro (mês 0): 100 (sem mudança)
+        // - Fevereiro (mês 1): 100 (sem mudança)
+        // - Março (mês 2): 100 (sem mudança)
+        // - Abril (mês 3): 110 (mudança, 3 % 3 == 0)
+        // - Maio (mês 4): 110 (sem mudança)
+        // - Junho (mês 5): 110 (sem mudança)
+        // - Julho (mês 6): 121 (mudança, 6 % 3 == 0)
+        // - Agosto (mês 7): 121 (sem mudança)
+        // - Setembro (mês 8): 121 (sem mudança)
+        let expectedResult = [
+            {
+                vacancy: false,
+                rentAmount: 100.00,
+                rentDueDate: new Date("2023-01-01T00:00:00")
+            },
+            {
+                vacancy: false,
+                rentAmount: 100.00,
+                rentDueDate: new Date("2023-02-01T00:00:00")
+            },
+            {
+                vacancy: false,
+                rentAmount: 100.00,
+                rentDueDate: new Date("2023-03-01T00:00:00")
+            },
+            {
+                vacancy: false,
+                rentAmount: 110.00, // Primeira mudança (mês 3)
+                rentDueDate: new Date("2023-04-01T00:00:00")
+            },
+            {
+                vacancy: false,
+                rentAmount: 110.00,
+                rentDueDate: new Date("2023-05-01T00:00:00")
+            },
+            {
+                vacancy: false,
+                rentAmount: 110.00,
+                rentDueDate: new Date("2023-06-01T00:00:00")
+            },
+            {
+                vacancy: false,
+                rentAmount: 121.00, // Segunda mudança (mês 6)
+                rentDueDate: new Date("2023-07-01T00:00:00")
+            },
+            {
+                vacancy: false,
+                rentAmount: 121.00,
+                rentDueDate: new Date("2023-08-01T00:00:00")
+            },
+            {
+                vacancy: false,
+                rentAmount: 121.00,
+                rentDueDate: new Date("2023-09-01T00:00:00")
+            }
+        ];
+
+        expect(result).toEqual(expectedResult);
+    });
 });
