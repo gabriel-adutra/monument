@@ -23,6 +23,38 @@ export function calculateMonthlyRent(baseMonthlyRent: number, leaseStartDate: Da
     windowEndDate: Date, dayOfMonthRentDue: number, rentRateChangeFrequency: number, rentChangeRate: number) {
 
     const monthlyRentRecords : MonthlyRentRecords = [];
+    
+    // Começar do primeiro mês da janela
+    let currentDate = new Date(windowStartDate);
+    currentDate.setDate(1); // Primeiro dia do mês
+    currentDate.setHours(0, 0, 0, 0); // Zerar horas
+    
+    // Iterar pelos meses até o final da janela
+    while (currentDate <= windowEndDate) {
+        // Criar data de vencimento para este mês
+        const rentDueDate = new Date(currentDate);
+        rentDueDate.setDate(dayOfMonthRentDue);
+        rentDueDate.setHours(0, 0, 0, 0);
+        
+        // Verificar se a data de vencimento está dentro da janela
+        if (rentDueDate >= windowStartDate && rentDueDate <= windowEndDate) {
+            // Calcular vacância: vacancy = true se rentDueDate < leaseStartDate
+            const vacancy = rentDueDate < leaseStartDate;
+            
+            // Usar baseMonthlyRent como rentAmount (por enquanto, sem mudanças)
+            const rentAmount = Math.round(baseMonthlyRent * 100) / 100; // Arredondar para 2 casas decimais
+            
+            monthlyRentRecords.push({
+                vacancy: vacancy,
+                rentAmount: rentAmount,
+                rentDueDate: new Date(rentDueDate)
+            });
+        }
+        
+        // Avançar para o próximo mês
+        currentDate.setMonth(currentDate.getMonth() + 1);
+    }
+    
     return monthlyRentRecords;    
 }
 
