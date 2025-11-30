@@ -7,6 +7,8 @@ export type MonthlyRentRecord = {
 
 export type MonthlyRentRecords = Array<MonthlyRentRecord>;
 
+const DAYS_IN_PRORATION_MONTH = 30;
+
 /**
  * Determines the vacancy, rent amount and due date for each month in a given time window
  * 
@@ -34,23 +36,30 @@ export function calculateMonthlyRent(baseMonthlyRent: number, leaseStartDate: Da
 
     // Process monthly rent records
     let currentDate = getFirstDayOfMonth(windowStartDate);
+    let previousVacancy: boolean | null = null;
+
     while (currentDate <= windowEndDate) {
         const rentDueDate = createRentDueDate(currentDate, dayOfMonthRentDue);
 
         if (isDateInWindow(rentDueDate, windowStartDate, windowEndDate)) {
             if (!shouldSkipDueDate(rentDueDate, normalizedLeaseStart, dayOfMonthRentDue)) {
                 const vacancy = isVacant(rentDueDate, normalizedLeaseStart);
-                currentRent = calculateUpdatedRent(
-                    currentRent,
-                    currentDate,
-                    rentChangeBaseDate,
-                    rentRateChangeFrequency,
-                    rentChangeRate,
-                    vacancy
-                );
-                const rentAmount = roundToTwoDecimals(currentRent);
+                
+                // Calculate rent change for NEXT period based on PREVIOUS period's vacancy
+                const monthsSinceBase = calculateMonthsBetween(rentChangeBaseDate, currentDate);
+                if (shouldApplyRentChange(monthsSinceBase, rentRateChangeFrequency)) {
+                    // Use previousVacancy if available, otherwise use current vacancy
+                    const vacancyToCheck = previousVacancy !== null ? previousVacancy : vacancy;
+                    
+                    if (canApplyRentChange(rentChangeRate, vacancyToCheck)) {
+                        currentRent = calculateNewMonthlyRent(currentRent, rentChangeRate);
+                    }
+                }
 
+                const rentAmount = roundToTwoDecimals(currentRent);
                 monthlyRentRecords.push({vacancy, rentAmount, rentDueDate: new Date(rentDueDate)});
+                
+                previousVacancy = vacancy;
             }
         }
 
@@ -136,7 +145,7 @@ function calculateProratedRentIfNeeded(leaseStartDate: Date, dayOfMonthRentDue: 
         const proratedAmount = calculateProratedAmount(
             currentRent,
             lastDayOfLeaseMonth - leaseDay,
-            30
+            DAYS_IN_PRORATION_MONTH
         );
         return createProratedRecord(proratedAmount, leaseStartDate);
     }
@@ -146,7 +155,7 @@ function calculateProratedRentIfNeeded(leaseStartDate: Date, dayOfMonthRentDue: 
         const proratedAmount = calculateProratedAmount(
             currentRent,
             dayOfMonthRentDue - leaseDay,
-            30
+            DAYS_IN_PRORATION_MONTH
         );
         return createProratedRecord(proratedAmount, leaseStartDate);
     }
@@ -154,7 +163,7 @@ function calculateProratedRentIfNeeded(leaseStartDate: Date, dayOfMonthRentDue: 
     // Case 3: Lease starts after due date in same month
     if (leaseDay > dayOfMonthRentDue && leaseStartDate > firstMonthRentDueDate) {
         const daysAfterDueDate = leaseDay - dayOfMonthRentDue;
-        const proratedAmount = calculateRemainingProratedAmount(currentRent, daysAfterDueDate, 30);
+        const proratedAmount = calculateRemainingProratedAmount(currentRent, daysAfterDueDate, DAYS_IN_PRORATION_MONTH);
         return createProratedRecord(proratedAmount, leaseStartDate);
     }
 
@@ -225,26 +234,6 @@ function shouldSkipDueDate(rentDueDate: Date, leaseStartDate: Date, dayOfMonthRe
 // ============================================================================
 // Rent Change Logic
 // ============================================================================
-
-/**
- * Calculates the updated rent based on change frequency and vacancy rules
- * NOTA: O README instrui que o aumento de aluguel deve entrar em vigor no próximo vencimento
- * (README linha 37: "If the rent price changes between the previous due date and the next due date,
- * then the new rent price will go into effect on the next due date."),
- * mas os testes fornecidos aplicam o aumento no vencimento atual.
- * Para passar nos testes do Code Assessment, seguimos o comportamento dos testes.
- */
-function calculateUpdatedRent(currentRent: number, currentDate: Date, rentChangeBaseDate: Date, rentRateChangeFrequency: number, rentChangeRate: number, vacancy: boolean): number {
-    const monthsSinceBase = calculateMonthsBetween(rentChangeBaseDate, currentDate);
-
-    if (shouldApplyRentChange(monthsSinceBase, rentRateChangeFrequency)) {
-        if (canApplyRentChange(rentChangeRate, vacancy)) {
-            return calculateNewMonthlyRent(currentRent, rentChangeRate);
-        }
-    }
-
-    return currentRent;
-}
 
 /**
  * Calculates the number of months between two dates
