@@ -19,15 +19,7 @@ export type MonthlyRentRecords = Array<MonthlyRentRecord>;
  * @param rentChangeRate : The rate to increase or decrease rent, input as decimal (not %), positive for increase, negative for decrease (Number),
  * @returns Array<MonthlyRentRecord>;
  */
-export function calculateMonthlyRent(
-    baseMonthlyRent: number,
-    leaseStartDate: Date,
-    windowStartDate: Date,
-    windowEndDate: Date,
-    dayOfMonthRentDue: number,
-    rentRateChangeFrequency: number,
-    rentChangeRate: number
-): MonthlyRentRecords {
+export function calculateMonthlyRent(baseMonthlyRent: number, leaseStartDate: Date, windowStartDate: Date, windowEndDate: Date, dayOfMonthRentDue: number, rentRateChangeFrequency: number, rentChangeRate: number): MonthlyRentRecords {
     const monthlyRentRecords: MonthlyRentRecords = [];
     const normalizedLeaseStart = normalizeDate(leaseStartDate);
     const rentChangeBaseDate = getFirstDayOfMonth(windowStartDate);
@@ -179,7 +171,7 @@ function calculateProratedRentIfNeeded(
     // Case 3: Lease starts after due date in same month
     if (leaseDay > dayOfMonthRentDue && leaseStartDate > firstMonthRentDueDate) {
         const daysAfterDueDate = leaseDay - dayOfMonthRentDue;
-        const proratedAmount = currentRent * (1 - daysAfterDueDate / 30);
+        const proratedAmount = calculateRemainingProratedAmount(currentRent, daysAfterDueDate, 30);
         return createProratedRecord(proratedAmount, leaseStartDate);
     }
 
@@ -191,6 +183,14 @@ function calculateProratedRentIfNeeded(
  */
 function calculateProratedAmount(monthlyRent: number, days: number, daysInMonth: number): number {
     return (monthlyRent * days) / daysInMonth;
+}
+
+/**
+ * Calculates remaining prorated amount after due date
+ * Formula: monthlyRent * (1 - daysAfter / daysInMonth)
+ */
+function calculateRemainingProratedAmount(monthlyRent: number, daysAfter: number, daysInMonth: number): number {
+    return monthlyRent * (1 - daysAfter / daysInMonth);
 }
 
 /**
@@ -306,13 +306,13 @@ function canApplyRentChange(rentChangeRate: number, vacancy: boolean): boolean {
 /**
  * Calculates the new monthly rent
  * 
- * @param baseMonthlyRent : the base amount of rent
+ * @param currentRent : the current amount of rent
  * @param rentChangeRate : the rate that rent my increase or decrease (positive for increase, negative for decrease)
  * @returns number
  * 
  */
-function calculateNewMonthlyRent(baseMonthlyRent: number, rentChangeRate: number) {
-    return baseMonthlyRent * (1 + rentChangeRate);
+function calculateNewMonthlyRent(currentRent: number, rentChangeRate: number) {
+    return currentRent * (1 + rentChangeRate);
 }
 
 /**
