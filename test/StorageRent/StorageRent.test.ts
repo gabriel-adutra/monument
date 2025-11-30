@@ -76,3 +76,4 @@ describe("calculateMonthlyRent function", () => {
     
         expect(result).toEqual(expectedResult);
       });
+});
