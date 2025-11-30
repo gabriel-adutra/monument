@@ -148,4 +148,31 @@ describe("calculateMonthlyRent function", () => {
 
         expect(result).toEqual(expectedResult);
     });
+
+    it("should use last day of month when dayOfMonthRentDue exceeds month days", () => {
+        // Teste: se dayOfMonthRentDue = 31 e o mês tem menos dias, usar o último dia do mês
+        // Exemplo: fevereiro 2023 tem 28 dias, então vencimento deve ser dia 28
+        const baseMonthlyRent = 100.00;
+        const leaseStartDate = new Date("2023-01-01T00:00:00");
+        const windowStartDate = new Date("2023-02-01T00:00:00");
+        const windowEndDate = new Date("2023-02-28T00:00:00");
+        const dayOfMonthRentDue = 31; // Maior que os dias de fevereiro (28)
+        const rentRateChangeFrequency = 1;
+        const rentChangeRate = 0;
+
+        const result = calculateMonthlyRent(baseMonthlyRent,
+            leaseStartDate, windowStartDate, windowEndDate, 
+            dayOfMonthRentDue, rentRateChangeFrequency, rentChangeRate);
+
+        // Deve usar o último dia de fevereiro (28) em vez de 31
+        let expectedResult = [
+            {
+                vacancy: false,
+                rentAmount: 100.00,
+                rentDueDate: new Date("2023-02-28T00:00:00") // Último dia de fevereiro, não dia 31
+            }
+        ];
+
+        expect(result).toEqual(expectedResult);
+    });
 });
