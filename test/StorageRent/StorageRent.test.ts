@@ -2,7 +2,7 @@ import { calculateMonthlyRent, MonthlyRentRecord, MonthlyRentRecords } from "../
 
 describe("calculateMonthlyRent function", () => {
   
-    it("should return MonthlyRentRecords", () => {
+    it("Test 1: should return MonthlyRentRecords", () => {
 
         const baseMonthlyRent = 100.00;
         const leaseStartDate = new Date("2023-01-01T00:00:00");
@@ -37,7 +37,7 @@ describe("calculateMonthlyRent function", () => {
         expect(result).toEqual(expectedResult);
     });
 
-    it("should return MonthlyRentRecords validate first payment due date and first month pro-rate when lease start is before monthly due date", () => {
+    it("Test 2: should return MonthlyRentRecords validate first payment due date and first month pro-rate when lease start is before monthly due date", () => {
 
         const baseMonthlyRent = 100.00;
         const leaseStartDate = new Date("2023-01-01T00:00:00");
@@ -77,7 +77,7 @@ describe("calculateMonthlyRent function", () => {
         expect(result).toEqual(expectedResult);
       });
 
-    it("should not increase rent when unit is vacant (rentChangeRate positive)", () => {
+    it("Test 3: should not increase rent when unit is vacant (rentChangeRate positive)", () => {
         const baseMonthlyRent = 100.00;
         const leaseStartDate = new Date("2023-04-01T00:00:00");
         const windowStartDate = new Date("2023-01-01T00:00:00");
@@ -111,7 +111,7 @@ describe("calculateMonthlyRent function", () => {
         expect(result).toEqual(expectedResult);
     });
 
-    it("should not decrease rent when unit is rented (rentChangeRate negative)", () => {
+    it("Test 4: should not decrease rent when unit is rented (rentChangeRate negative)", () => {
         const baseMonthlyRent = 100.00;
         const leaseStartDate = new Date("2022-12-01T00:00:00");
         const windowStartDate = new Date("2023-01-01T00:00:00");
@@ -145,7 +145,7 @@ describe("calculateMonthlyRent function", () => {
         expect(result).toEqual(expectedResult);
     });
 
-    it("should use last day of month when dayOfMonthRentDue exceeds month days", () => {
+    it("Test 5: should use last day of month when dayOfMonthRentDue exceeds month days", () => {
         const baseMonthlyRent = 100.00;
         const leaseStartDate = new Date("2023-01-01T00:00:00");
         const windowStartDate = new Date("2023-02-01T00:00:00");
@@ -169,7 +169,7 @@ describe("calculateMonthlyRent function", () => {
         expect(result).toEqual(expectedResult);
     });
 
-    it("should change rent every X months based on rentRateChangeFrequency (README linha 33)", () => {
+    it("Test 6: should change rent every X months based on rentRateChangeFrequency (README linha 33)", () => {
         const baseMonthlyRent = 100.00;
         const leaseStartDate = new Date("2023-01-01T00:00:00");
         const windowStartDate = new Date("2023-01-01T00:00:00");
@@ -218,7 +218,7 @@ describe("calculateMonthlyRent function", () => {
         expect(result).toEqual(expectedResult);
     });
 
-    it("should generate payment on first day of lease when lease starts after due date (README linha 16)", () => {
+    it("Test 7: should generate payment on first day of lease when lease starts after due date (README linha 16)", () => {
         const baseMonthlyRent = 100.00;
         const leaseStartDate = new Date("2023-01-20T00:00:00");
         const windowStartDate = new Date("2023-01-01T00:00:00");
@@ -252,7 +252,7 @@ describe("calculateMonthlyRent function", () => {
         expect(result).toEqual(expectedResult);
     });
 
-    it("should prorate rent when lease begins after due date in same month (README linha 29)", () => {
+    it("Test 8: should prorate rent when lease begins after due date in same month (README linha 29)", () => {
         const baseMonthlyRent = 100.00;
         const leaseStartDate = new Date("2023-01-20T00:00:00");
         const windowStartDate = new Date("2023-01-01T00:00:00");
@@ -281,7 +281,7 @@ describe("calculateMonthlyRent function", () => {
         expect(result).toEqual(expectedResult);
     });
 
-    it("should prorate rent when rent due on 31st and lease begins on 5th of February (README linha 25)", () => {
+    it("Test 9: should prorate rent when rent due on 31st and lease begins on 5th of February (README linha 25)", () => {
         const baseMonthlyRent = 100.00;
         const leaseStartDate = new Date("2023-02-05T00:00:00");
         const windowStartDate = new Date("2023-02-01T00:00:00");
@@ -310,7 +310,7 @@ describe("calculateMonthlyRent function", () => {
         expect(result).toEqual(expectedResult);
     });
 
-    it("should apply rent change on next due date when change occurs between due dates (README linha 37)", () => {
+    it("Test 10: should apply rent change on next due date when change occurs between due dates (README linha 37)", () => {
         const baseMonthlyRent = 100.00;
         const leaseStartDate = new Date("2023-01-01T00:00:00");
         const windowStartDate = new Date("2023-01-01T00:00:00");
@@ -344,7 +344,7 @@ describe("calculateMonthlyRent function", () => {
         expect(result).toEqual(expectedResult);
     });
 
-    it("README rule: rent change should take effect on next due date (when unit is vacant)", () => {
+    it("Test 11: README rule: rent change should take effect on next due date (when unit is vacant)", () => {
         const baseMonthlyRent = 100.00;
         const leaseStartDate = new Date("2023-03-01T00:00:00");
         const windowStartDate = new Date("2023-01-01T00:00:00");
@@ -383,7 +383,7 @@ describe("calculateMonthlyRent function", () => {
         expect(result).toEqual(expectedResult);
     });
 
-    it("README rule: rent change should take effect on next due date (example from README)", () => {
+    it("Test 12: README rule: rent change should take effect on next due date (example from README)", () => {
         const baseMonthlyRent = 100.00;
         const leaseStartDate = new Date("2023-02-01T00:00:00");
         const windowStartDate = new Date("2023-01-01T00:00:00");
@@ -417,7 +417,7 @@ describe("calculateMonthlyRent function", () => {
         expect(result).toEqual(expectedResult);
     });
 
-    it("should decrease rent when unit is vacant (rentChangeRate negative)", () => {
+    it("Test 13: should decrease rent when unit is vacant (rentChangeRate negative)", () => {
         const baseMonthlyRent = 100.00;
         const leaseStartDate = new Date("2023-04-01T00:00:00");
         const windowStartDate = new Date("2023-01-01T00:00:00");
@@ -451,7 +451,7 @@ describe("calculateMonthlyRent function", () => {
         expect(result).toEqual(expectedResult);
     });
 
-    it("should handle leap year correctly (February with 29 days)", () => {
+    it("Test 14: should handle leap year correctly (February with 29 days)", () => {
         const baseMonthlyRent = 100.00;
         const leaseStartDate = new Date("2024-01-01T00:00:00");
         const windowStartDate = new Date("2024-02-01T00:00:00");
@@ -475,7 +475,7 @@ describe("calculateMonthlyRent function", () => {
         expect(result).toEqual(expectedResult);
     });
 
-    it("should round rent amount to two decimal places correctly", () => {
+    it("Test 15: should round rent amount to two decimal places correctly", () => {
         const baseMonthlyRent = 100.00;
         const leaseStartDate = new Date("2023-01-01T00:00:00");
         const windowStartDate = new Date("2023-01-01T00:00:00");
@@ -509,7 +509,7 @@ describe("calculateMonthlyRent function", () => {
         expect(result).toEqual(expectedResult);
     });
 
-    it("should change rent every 3 months based on rentRateChangeFrequency", () => {
+    it("Test 16: should change rent every 3 months based on rentRateChangeFrequency", () => {
         const baseMonthlyRent = 100.00;
         const leaseStartDate = new Date("2023-01-01T00:00:00");
         const windowStartDate = new Date("2023-01-01T00:00:00");
@@ -573,7 +573,7 @@ describe("calculateMonthlyRent function", () => {
         expect(result).toEqual(expectedResult);
     });
 
-    it("should handle proration with frequency > 1 (complex combination)", () => {
+    it("Test 17: should handle proration with frequency > 1 (complex combination)", () => {
         const baseMonthlyRent = 100.00;
         const leaseStartDate = new Date("2023-01-05T00:00:00");
         const windowStartDate = new Date("2023-01-01T00:00:00");
@@ -622,7 +622,7 @@ describe("calculateMonthlyRent function", () => {
         expect(result).toEqual(expectedResult);
     });
 
-    it("should handle window starting after lease begins (generic case)", () => {
+    it("Test 18: should handle window starting after lease begins (generic case)", () => {
         const baseMonthlyRent = 100.00;
         const leaseStartDate = new Date("2023-01-01T00:00:00");
         const windowStartDate = new Date("2023-03-01T00:00:00");
