@@ -60,14 +60,15 @@ export function calculateMonthlyRent(baseMonthlyRent: number, leaseStartDate: Da
             });
         }
         
-        // Se lease começa depois do dia de vencimento no mesmo mês - primeiro pagamento no dia do lease
+        // Se lease começa depois do dia de vencimento no mesmo mês - proratação (README linha 29)
         if (leaseDay > dayOfMonthRentDue && normalizedLeaseStart > firstMonthRentDueDate) {
-            // Primeiro pagamento no primeiro dia do lease com valor integral
-            const rentAmount = Math.round(currentRent * 100) / 100;
+            // Calcular proratação: monthly_rent * (1 - (leaseDay - dayOfMonthRentDue)/30)
+            const proratedAmount = currentRent * (1 - (leaseDay - dayOfMonthRentDue) / 30);
+            const roundedProratedAmount = Math.round(proratedAmount * 100) / 100;
             
             monthlyRentRecords.push({
                 vacancy: false, // Lease já começou, então não está vazio
-                rentAmount: rentAmount,
+                rentAmount: roundedProratedAmount,
                 rentDueDate: new Date(normalizedLeaseStart)
             });
         }

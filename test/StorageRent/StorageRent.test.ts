@@ -238,6 +238,7 @@ describe("calculateMonthlyRent function", () => {
     it("should generate payment on first day of lease when lease starts after due date (README linha 16)", () => {
         // Teste: "Rent is due on the first day of a tenant's lease"
         // Quando lease começa depois do vencimento no mesmo mês, deve gerar registro no dia do lease
+        // Conforme README linha 29, deve ser proratado: monthly_rent * (1 - (leaseDay - dayOfMonthRentDue)/30)
         // Exemplo: vencimento dia 15, lease começa dia 20
         const baseMonthlyRent = 100.00;
         const leaseStartDate = new Date("2023-01-20T00:00:00"); // Lease começa dia 20
@@ -251,12 +252,13 @@ describe("calculateMonthlyRent function", () => {
             leaseStartDate, windowStartDate, windowEndDate, 
             dayOfMonthRentDue, rentRateChangeFrequency, rentChangeRate);
 
-        // Deve gerar registro no dia 20 (primeiro dia do lease) com valor integral
+        // Deve gerar registro no dia 20 (primeiro dia do lease) com valor proratado
+        // Fórmula: 100 * (1 - (20 - 15)/30) = 100 * 25/30 = 83.33
         // E depois os registros mensais normais no dia 15
         let expectedResult = [
             {
                 vacancy: false,
-                rentAmount: 100.00, // Valor integral no primeiro dia do lease
+                rentAmount: 83.33, // Valor proratado conforme README linha 29
                 rentDueDate: new Date("2023-01-20T00:00:00") // Primeiro dia do lease
             },
             {
@@ -268,6 +270,39 @@ describe("calculateMonthlyRent function", () => {
                 vacancy: false,
                 rentAmount: 100.00,
                 rentDueDate: new Date("2023-03-15T00:00:00") // Próximo vencimento normal
+            }
+        ];
+
+        expect(result).toEqual(expectedResult);
+    });
+
+    it("should prorate rent when lease begins after due date in same month (README linha 29)", () => {
+        // Teste: rent due on 15th, lease begins on 20th
+        // Fórmula do README: monthly_rent * (1 - (20 - 15)/30) = monthly_rent * 25/30
+        const baseMonthlyRent = 100.00;
+        const leaseStartDate = new Date("2023-01-20T00:00:00"); // Lease começa dia 20
+        const windowStartDate = new Date("2023-01-01T00:00:00");
+        const windowEndDate = new Date("2023-02-28T00:00:00");
+        const dayOfMonthRentDue = 15; // Vencimento dia 15
+        const rentRateChangeFrequency = 1;
+        const rentChangeRate = 0;
+
+        const result = calculateMonthlyRent(baseMonthlyRent,
+            leaseStartDate, windowStartDate, windowEndDate, 
+            dayOfMonthRentDue, rentRateChangeFrequency, rentChangeRate);
+
+        // Primeiro pagamento: 100 * (1 - (20 - 15)/30) = 100 * 25/30 = 83.33
+        // Próximo pagamento: 100 no dia 15 de fevereiro
+        let expectedResult = [
+            {
+                vacancy: false,
+                rentAmount: 83.33, // 100 * (1 - 5/30) = 100 * 25/30 = 83.33
+                rentDueDate: new Date("2023-01-20T00:00:00") // Primeiro pagamento no dia do lease
+            },
+            {
+                vacancy: false,
+                rentAmount: 100.00,
+                rentDueDate: new Date("2023-02-15T00:00:00") // Próximo pagamento no dia de vencimento
             }
         ];
 
