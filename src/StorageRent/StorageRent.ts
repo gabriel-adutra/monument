@@ -24,6 +24,14 @@ export function calculateMonthlyRent(baseMonthlyRent: number, leaseStartDate: Da
 
     const monthlyRentRecords : MonthlyRentRecords = [];
     
+    // Calcular a data base para mudanças de rent (primeiro dia do mês de windowStartDate)
+    const rentChangeBaseDate = new Date(windowStartDate);
+    rentChangeBaseDate.setDate(1);
+    rentChangeBaseDate.setHours(0, 0, 0, 0);
+    
+    // Rent atual começa com baseMonthlyRent
+    let currentRent = baseMonthlyRent;
+    
     // Começar do primeiro mês da janela
     let currentDate = new Date(windowStartDate);
     currentDate.setDate(1); // Primeiro dia do mês
@@ -31,6 +39,16 @@ export function calculateMonthlyRent(baseMonthlyRent: number, leaseStartDate: Da
     
     // Iterar pelos meses até o final da janela
     while (currentDate <= windowEndDate) {
+        // Verificar se a rent deve mudar neste mês
+        // Mudanças ocorrem a cada rentRateChangeFrequency meses a partir de rentChangeBaseDate
+        const monthsSinceBase = (currentDate.getFullYear() - rentChangeBaseDate.getFullYear()) * 12 + 
+                                (currentDate.getMonth() - rentChangeBaseDate.getMonth());
+        
+        // Se passou pelo menos uma frequência desde a última mudança, aplicar nova mudança
+        if (monthsSinceBase > 0 && monthsSinceBase % rentRateChangeFrequency === 0) {
+            currentRent = calculateNewMonthlyRent(currentRent, rentChangeRate);
+        }
+        
         // Criar data de vencimento para este mês
         const rentDueDate = new Date(currentDate);
         const year = rentDueDate.getFullYear();
@@ -47,8 +65,8 @@ export function calculateMonthlyRent(baseMonthlyRent: number, leaseStartDate: Da
             // Calcular vacância: vacancy = true se rentDueDate < leaseStartDate
             const vacancy = rentDueDate < leaseStartDate;
             
-            // Usar baseMonthlyRent como rentAmount (por enquanto, sem mudanças)
-            const rentAmount = Math.round(baseMonthlyRent * 100) / 100; // Arredondar para 2 casas decimais
+            // Usar currentRent como rentAmount
+            const rentAmount = Math.round(currentRent * 100) / 100; // Arredondar para 2 casas decimais
             
             monthlyRentRecords.push({
                 vacancy: vacancy,
