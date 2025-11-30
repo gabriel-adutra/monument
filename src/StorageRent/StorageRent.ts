@@ -44,11 +44,25 @@ export function calculateMonthlyRent(baseMonthlyRent: number, leaseStartDate: Da
     
     // Verificar se lease está dentro da janela
     if (normalizedLeaseStart >= windowStartDate && normalizedLeaseStart <= windowEndDate) {
+        const lastDayOfLeaseMonth = getLastDayOfMonth(leaseYear, leaseMonth);
         const firstMonthRentDueDate = new Date(leaseYear, leaseMonth, dayOfMonthRentDue);
         firstMonthRentDueDate.setHours(0, 0, 0, 0);
         
+        // Caso 3.1 (README linha 25): Se vencimento > dias do mês e lease começa antes do último dia
+        // Exemplo: vencimento dia 31, lease dia 5 de fevereiro (28 dias)
+        // Fórmula: monthly_rent * (lastDayOfMonth - leaseDay)/30
+        if (dayOfMonthRentDue > lastDayOfLeaseMonth && leaseDay < lastDayOfLeaseMonth) {
+            const proratedAmount = (currentRent * (lastDayOfLeaseMonth - leaseDay)) / 30;
+            const roundedProratedAmount = Math.round(proratedAmount * 100) / 100;
+            
+            monthlyRentRecords.push({
+                vacancy: false, // Lease já começou, então não está vazio
+                rentAmount: roundedProratedAmount,
+                rentDueDate: new Date(normalizedLeaseStart)
+            });
+        }
         // Se lease começa antes do dia de vencimento no mesmo mês - proratação
-        if (leaseDay < dayOfMonthRentDue && normalizedLeaseStart < firstMonthRentDueDate) {
+        else if (leaseDay < dayOfMonthRentDue && normalizedLeaseStart < firstMonthRentDueDate) {
             // Calcular proratação: monthly_rent * (dayOfMonthRentDue - leaseDay) / 30
             const proratedAmount = (currentRent * (dayOfMonthRentDue - leaseDay)) / 30;
             const roundedProratedAmount = Math.round(proratedAmount * 100) / 100;
@@ -100,7 +114,13 @@ export function calculateMonthlyRent(baseMonthlyRent: number, leaseStartDate: Da
                                       rentDueDate.getMonth() === normalizedLeaseStart.getMonth();
             const leaseStartsAfterDueDate = normalizedLeaseStart > rentDueDate;
             
-            if (!(isSameMonthAsLease && leaseStartsAfterDueDate)) {
+            // Verificar se é caso 3.1: vencimento > dias do mês e lease no mesmo mês
+            // Se sim, não gerar registro do vencimento (já foi gerado no primeiro dia do lease)
+            const isCase31 = isSameMonthAsLease && 
+                            dayOfMonthRentDue > lastDayOfMonth &&
+                            normalizedLeaseStart.getDate() < lastDayOfMonth;
+            
+            if (!(isSameMonthAsLease && leaseStartsAfterDueDate) && !isCase31) {
                 // Calcular vacância: vacancy = true se rentDueDate < leaseStartDate
                 const vacancy = rentDueDate < normalizedLeaseStart;
                 

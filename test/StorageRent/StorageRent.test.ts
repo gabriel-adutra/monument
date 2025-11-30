@@ -308,4 +308,38 @@ describe("calculateMonthlyRent function", () => {
 
         expect(result).toEqual(expectedResult);
     });
+
+    it("should prorate rent when rent due on 31st and lease begins on 5th of February (README linha 25)", () => {
+        // Teste: rent due on 31st, lease begins on 5th of February 2023
+        // Fórmula do README: monthly_rent * (28 - 5)/30 = monthly_rent * 23/30
+        // Fevereiro 2023 tem 28 dias (não é bissexto)
+        const baseMonthlyRent = 100.00;
+        const leaseStartDate = new Date("2023-02-05T00:00:00"); // Lease começa dia 5 de fevereiro
+        const windowStartDate = new Date("2023-02-01T00:00:00");
+        const windowEndDate = new Date("2023-03-31T00:00:00");
+        const dayOfMonthRentDue = 31; // Vencimento dia 31
+        const rentRateChangeFrequency = 1;
+        const rentChangeRate = 0;
+
+        const result = calculateMonthlyRent(baseMonthlyRent,
+            leaseStartDate, windowStartDate, windowEndDate, 
+            dayOfMonthRentDue, rentRateChangeFrequency, rentChangeRate);
+
+        // Primeiro pagamento: 100 * (28 - 5)/30 = 100 * 23/30 = 76.67
+        // Próximo pagamento: 100 no dia 31 de março (ou último dia se março não tiver 31)
+        let expectedResult = [
+            {
+                vacancy: false,
+                rentAmount: 76.67, // 100 * (28 - 5)/30 = 100 * 23/30 = 76.67
+                rentDueDate: new Date("2023-02-05T00:00:00") // Primeiro pagamento no dia do lease
+            },
+            {
+                vacancy: false,
+                rentAmount: 100.00,
+                rentDueDate: new Date("2023-03-31T00:00:00") // Próximo pagamento no dia 31 (março tem 31 dias)
+            }
+        ];
+
+        expect(result).toEqual(expectedResult);
+    });
 });
