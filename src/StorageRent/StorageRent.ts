@@ -26,13 +26,8 @@ export function calculateMonthlyRent(baseMonthlyRent: number, leaseStartDate: Da
     let currentRent = baseMonthlyRent;
 
     // Handle prorated rent for lease start date
-    const proratedRecord = calculateProratedRentIfNeeded(
-        normalizedLeaseStart,
-        dayOfMonthRentDue,
-        currentRent,
-        windowStartDate,
-        windowEndDate
-    );
+    const proratedRecord = calculateProratedRentIfNeeded(normalizedLeaseStart, dayOfMonthRentDue, currentRent, windowStartDate, windowEndDate);
+
     if (proratedRecord) {
         monthlyRentRecords.push(proratedRecord);
     }
@@ -55,11 +50,7 @@ export function calculateMonthlyRent(baseMonthlyRent: number, leaseStartDate: Da
                 );
                 const rentAmount = roundToTwoDecimals(currentRent);
 
-                monthlyRentRecords.push({
-                    vacancy,
-                    rentAmount,
-                    rentDueDate: new Date(rentDueDate)
-                });
+                monthlyRentRecords.push({vacancy, rentAmount, rentDueDate: new Date(rentDueDate)});
             }
         }
 
@@ -129,13 +120,7 @@ function isDateInWindow(date: Date, windowStart: Date, windowEnd: Date): boolean
 /**
  * Calculates prorated rent if the lease starts within the window and requires proration
  */
-function calculateProratedRentIfNeeded(
-    leaseStartDate: Date,
-    dayOfMonthRentDue: number,
-    currentRent: number,
-    windowStartDate: Date,
-    windowEndDate: Date
-): MonthlyRentRecord | null {
+function calculateProratedRentIfNeeded(leaseStartDate: Date, dayOfMonthRentDue: number, currentRent: number, windowStartDate: Date, windowEndDate: Date): MonthlyRentRecord | null {
     if (!isDateInWindow(leaseStartDate, windowStartDate, windowEndDate)) {
         return null;
     }
@@ -216,13 +201,8 @@ function isVacant(rentDueDate: Date, leaseStartDate: Date): boolean {
 /**
  * Checks if a due date should be skipped because lease starts after it in the same month
  */
-function shouldSkipDueDate(
-    rentDueDate: Date,
-    leaseStartDate: Date,
-    dayOfMonthRentDue: number
-): boolean {
-    const isSameMonthAsLease = rentDueDate.getFullYear() === leaseStartDate.getFullYear() &&
-                                rentDueDate.getMonth() === leaseStartDate.getMonth();
+function shouldSkipDueDate(rentDueDate: Date, leaseStartDate: Date, dayOfMonthRentDue: number): boolean {
+    const isSameMonthAsLease = rentDueDate.getFullYear() === leaseStartDate.getFullYear() && rentDueDate.getMonth() === leaseStartDate.getMonth();
 
     if (!isSameMonthAsLease) {
         return false;
@@ -254,14 +234,7 @@ function shouldSkipDueDate(
  * mas os testes fornecidos aplicam o aumento no vencimento atual.
  * Para passar nos testes do Code Assessment, seguimos o comportamento dos testes.
  */
-function calculateUpdatedRent(
-    currentRent: number,
-    currentDate: Date,
-    rentChangeBaseDate: Date,
-    rentRateChangeFrequency: number,
-    rentChangeRate: number,
-    vacancy: boolean
-): number {
+function calculateUpdatedRent(currentRent: number, currentDate: Date, rentChangeBaseDate: Date, rentRateChangeFrequency: number, rentChangeRate: number, vacancy: boolean): number {
     const monthsSinceBase = calculateMonthsBetween(rentChangeBaseDate, currentDate);
 
     if (shouldApplyRentChange(monthsSinceBase, rentRateChangeFrequency)) {
