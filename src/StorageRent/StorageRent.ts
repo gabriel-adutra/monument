@@ -33,7 +33,13 @@ export function calculateMonthlyRent(baseMonthlyRent: number, leaseStartDate: Da
     while (currentDate <= windowEndDate) {
         // Criar data de vencimento para este mês
         const rentDueDate = new Date(currentDate);
-        rentDueDate.setDate(dayOfMonthRentDue);
+        const year = rentDueDate.getFullYear();
+        const month = rentDueDate.getMonth();
+        const lastDayOfMonth = getLastDayOfMonth(year, month);
+        
+        // Se o dia especificado é maior que os dias do mês, usar o último dia do mês
+        const dayToUse = dayOfMonthRentDue > lastDayOfMonth ? lastDayOfMonth : dayOfMonthRentDue;
+        rentDueDate.setDate(dayToUse);
         rentDueDate.setHours(0, 0, 0, 0);
         
         // Verificar se a data de vencimento está dentro da janela
@@ -79,4 +85,25 @@ function calculateNewMonthlyRent(baseMonthlyRent: number, rentChangeRate: number
  */
 function isLeapYear(year: number) {
     return (year % 4 == 0 && year % 100 != 0);
+}
+
+/**
+ * Gets the last day of a given month
+ * 
+ * @param year 
+ * @param month (0-11, where 0 = January, 11 = December)
+ * @returns number
+ * 
+ */
+function getLastDayOfMonth(year: number, month: number): number {
+    // February (month 1)
+    if (month === 1) {
+        return isLeapYear(year) ? 29 : 28;
+    }
+    // Months with 31 days: January, March, May, July, August, October, December
+    if ([0, 2, 4, 6, 7, 9, 11].includes(month)) {
+        return 31;
+    }
+    // Months with 30 days: April, June, September, November
+    return 30;
 }
