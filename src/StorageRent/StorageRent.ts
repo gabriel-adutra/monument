@@ -24,6 +24,10 @@ export function calculateMonthlyRent(baseMonthlyRent: number, leaseStartDate: Da
 
     const monthlyRentRecords : MonthlyRentRecords = [];
     
+    // Normalizar datas para comparação
+    const normalizedLeaseStart = new Date(leaseStartDate);
+    normalizedLeaseStart.setHours(0, 0, 0, 0);
+    
     // Calcular a data base para mudanças de rent (primeiro dia do mês de windowStartDate)
     const rentChangeBaseDate = new Date(windowStartDate);
     rentChangeBaseDate.setDate(1);
@@ -31,6 +35,31 @@ export function calculateMonthlyRent(baseMonthlyRent: number, leaseStartDate: Da
     
     // Rent atual começa com baseMonthlyRent
     let currentRent = baseMonthlyRent;
+    
+    // Verificar se precisa de proratação no primeiro mês
+    // Proratação: quando lease começa antes do dia de vencimento no mesmo mês
+    const leaseYear = normalizedLeaseStart.getFullYear();
+    const leaseMonth = normalizedLeaseStart.getMonth();
+    const leaseDay = normalizedLeaseStart.getDate();
+    
+    // Verificar se lease está dentro da janela e antes do dia de vencimento
+    if (normalizedLeaseStart >= windowStartDate && normalizedLeaseStart <= windowEndDate) {
+        const firstMonthRentDueDate = new Date(leaseYear, leaseMonth, dayOfMonthRentDue);
+        firstMonthRentDueDate.setHours(0, 0, 0, 0);
+        
+        // Se lease começa antes do dia de vencimento no mesmo mês
+        if (leaseDay < dayOfMonthRentDue && normalizedLeaseStart < firstMonthRentDueDate) {
+            // Calcular proratação: monthly_rent * (dayOfMonthRentDue - leaseDay) / 30
+            const proratedAmount = (currentRent * (dayOfMonthRentDue - leaseDay)) / 30;
+            const roundedProratedAmount = Math.round(proratedAmount * 100) / 100;
+            
+            monthlyRentRecords.push({
+                vacancy: false, // Lease já começou, então não está vazio
+                rentAmount: roundedProratedAmount,
+                rentDueDate: new Date(normalizedLeaseStart)
+            });
+        }
+    }
     
     // Começar do primeiro mês da janela
     let currentDate = new Date(windowStartDate);
