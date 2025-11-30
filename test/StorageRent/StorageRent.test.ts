@@ -679,4 +679,107 @@ describe("calculateMonthlyRent function", () => {
 
         expect(result).toEqual(expectedResult);
     });
+
+    // ============================================================================
+    // TESTES ADICIONAIS: Casos de borda e combinações complexas
+    // ============================================================================
+
+    it("should handle proration with frequency > 1 (complex combination)", () => {
+        // Teste: Combinação complexa - proratação no primeiro mês + mudança de rent a cada 2 meses
+        // Valida se proratação e mudança de rent funcionam juntas corretamente
+        const baseMonthlyRent = 100.00;
+        const leaseStartDate = new Date("2023-01-05T00:00:00"); // Lease começa dia 5
+        const windowStartDate = new Date("2023-01-01T00:00:00");
+        const windowEndDate = new Date("2023-05-31T00:00:00");
+        const dayOfMonthRentDue = 15; // Vencimento dia 15
+        const rentRateChangeFrequency = 2; // Mudança a cada 2 meses
+        const rentChangeRate = 0.1; // Aumento de 10%
+
+        const result = calculateMonthlyRent(baseMonthlyRent,
+            leaseStartDate, windowStartDate, windowEndDate, 
+            dayOfMonthRentDue, rentRateChangeFrequency, rentChangeRate);
+
+        // Janeiro dia 5: proratação = 100 * (15 - 5)/30 = 100 * 10/30 = 33.33
+        // Janeiro dia 15: 100 (sem mudança, mês 0)
+        // Fevereiro dia 15: 100 (sem mudança, mês 1)
+        // Março dia 15: 110 (mudança aplicada, mês 2)
+        // Abril dia 15: 110 (sem mudança, mês 3)
+        // Maio dia 15: 121 (mudança aplicada, mês 4)
+        let expectedResult = [
+            {
+                vacancy: false,
+                rentAmount: 33.33, // Proratação: 100 * (15 - 5)/30 = 33.33
+                rentDueDate: new Date("2023-01-05T00:00:00")
+            },
+            {
+                vacancy: false,
+                rentAmount: 100.00, // Janeiro dia 15: sem mudança (mês 0)
+                rentDueDate: new Date("2023-01-15T00:00:00")
+            },
+            {
+                vacancy: false,
+                rentAmount: 100.00, // Fevereiro: sem mudança (mês 1)
+                rentDueDate: new Date("2023-02-15T00:00:00")
+            },
+            {
+                vacancy: false,
+                rentAmount: 110.00, // Março: mudança aplicada (mês 2)
+                rentDueDate: new Date("2023-03-15T00:00:00")
+            },
+            {
+                vacancy: false,
+                rentAmount: 110.00, // Abril: sem mudança (mês 3)
+                rentDueDate: new Date("2023-04-15T00:00:00")
+            },
+            {
+                vacancy: false,
+                rentAmount: 121.00, // Maio: mudança aplicada (mês 4)
+                rentDueDate: new Date("2023-05-15T00:00:00")
+            }
+        ];
+
+        expect(result).toEqual(expectedResult);
+    });
+
+    it("should handle window starting after lease begins (generic case)", () => {
+        // Teste: Window que começa depois do lease começar (caso genérico)
+        // Lease começa em janeiro, window começa em março
+        // Valida que registros são gerados corretamente quando window não inclui o início do lease
+        const baseMonthlyRent = 100.00;
+        const leaseStartDate = new Date("2023-01-01T00:00:00"); // Lease começa em janeiro
+        const windowStartDate = new Date("2023-03-01T00:00:00"); // Window começa em março
+        const windowEndDate = new Date("2023-05-31T00:00:00");
+        const dayOfMonthRentDue = 1;
+        const rentRateChangeFrequency = 1;
+        const rentChangeRate = 0.1; // Aumento de 10%
+
+        const result = calculateMonthlyRent(baseMonthlyRent,
+            leaseStartDate, windowStartDate, windowEndDate, 
+            dayOfMonthRentDue, rentRateChangeFrequency, rentChangeRate);
+
+        // Como window começa em março, o cálculo de mudanças começa a contar a partir de março:
+        // - Março (mês 0): 100 (sem mudança ainda, baseMonthlyRent)
+        // - Abril (mês 1): 110 (primeira mudança aplicada, 100 * 1.1)
+        // - Maio (mês 2): 121 (segunda mudança aplicada, 110 * 1.1)
+        // Todos com vacancy = false (lease já começou em janeiro, antes do window)
+        let expectedResult = [
+            {
+                vacancy: false,
+                rentAmount: 100.00, // Março (mês 0): sem mudança ainda
+                rentDueDate: new Date("2023-03-01T00:00:00")
+            },
+            {
+                vacancy: false,
+                rentAmount: 110.00, // Abril (mês 1): primeira mudança aplicada
+                rentDueDate: new Date("2023-04-01T00:00:00")
+            },
+            {
+                vacancy: false,
+                rentAmount: 121.00, // Maio (mês 2): segunda mudança aplicada
+                rentDueDate: new Date("2023-05-01T00:00:00")
+            }
+        ];
+
+        expect(result).toEqual(expectedResult);
+    });
 });
