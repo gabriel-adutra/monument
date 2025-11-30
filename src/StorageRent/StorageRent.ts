@@ -145,8 +145,7 @@ function calculateProratedRentIfNeeded(
     const leaseMonth = leaseStartDate.getMonth();
     const leaseDay = leaseStartDate.getDate();
     const lastDayOfLeaseMonth = getLastDayOfMonth(leaseYear, leaseMonth);
-    const firstMonthRentDueDate = new Date(leaseYear, leaseMonth, dayOfMonthRentDue);
-    firstMonthRentDueDate.setHours(0, 0, 0, 0);
+    const firstMonthRentDueDate = normalizeDate(new Date(leaseYear, leaseMonth, dayOfMonthRentDue));
 
     // Case 1: Rent due date exceeds month days and lease starts before last day
     if (dayOfMonthRentDue > lastDayOfLeaseMonth && leaseDay < lastDayOfLeaseMonth) {
@@ -225,23 +224,23 @@ function shouldSkipDueDate(
 ): boolean {
     const isSameMonthAsLease = rentDueDate.getFullYear() === leaseStartDate.getFullYear() &&
                                 rentDueDate.getMonth() === leaseStartDate.getMonth();
-    const leaseStartsAfterDueDate = leaseStartDate > rentDueDate;
 
-    if (isSameMonthAsLease && leaseStartsAfterDueDate) {
+    if (!isSameMonthAsLease) {
+        return false;
+    }
+
+    const leaseStartsAfterDueDate = leaseStartDate > rentDueDate;
+    if (leaseStartsAfterDueDate) {
         return true;
     }
 
     // Case 3.1: Rent due date exceeds month days and lease starts before last day
-    if (isSameMonthAsLease) {
-        const year = rentDueDate.getFullYear();
-        const month = rentDueDate.getMonth();
-        const lastDayOfMonth = getLastDayOfMonth(year, month);
-        const isCase31 = dayOfMonthRentDue > lastDayOfMonth &&
-                        leaseStartDate.getDate() < lastDayOfMonth;
-        return isCase31;
-    }
-
-    return false;
+    const year = rentDueDate.getFullYear();
+    const month = rentDueDate.getMonth();
+    const lastDayOfMonth = getLastDayOfMonth(year, month);
+    const isCase31 = dayOfMonthRentDue > lastDayOfMonth &&
+                    leaseStartDate.getDate() < lastDayOfMonth;
+    return isCase31;
 }
 
 // ============================================================================
