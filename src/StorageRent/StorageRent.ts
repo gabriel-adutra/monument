@@ -19,151 +19,289 @@ export type MonthlyRentRecords = Array<MonthlyRentRecord>;
  * @param rentChangeRate : The rate to increase or decrease rent, input as decimal (not %), positive for increase, negative for decrease (Number),
  * @returns Array<MonthlyRentRecord>;
  */
-export function calculateMonthlyRent(baseMonthlyRent: number, leaseStartDate: Date, windowStartDate: Date, 
-    windowEndDate: Date, dayOfMonthRentDue: number, rentRateChangeFrequency: number, rentChangeRate: number) {
-
-    const monthlyRentRecords : MonthlyRentRecords = [];
-    
-    // Normalizar datas para comparação
-    const normalizedLeaseStart = new Date(leaseStartDate);
-    normalizedLeaseStart.setHours(0, 0, 0, 0);
-    
-    // Calcular a data base para mudanças de rent (primeiro dia do mês de windowStartDate)
-    const rentChangeBaseDate = new Date(windowStartDate);
-    rentChangeBaseDate.setDate(1);
-    rentChangeBaseDate.setHours(0, 0, 0, 0);
-    
-    // Rent atual começa com baseMonthlyRent
+export function calculateMonthlyRent(
+    baseMonthlyRent: number,
+    leaseStartDate: Date,
+    windowStartDate: Date,
+    windowEndDate: Date,
+    dayOfMonthRentDue: number,
+    rentRateChangeFrequency: number,
+    rentChangeRate: number
+): MonthlyRentRecords {
+    const monthlyRentRecords: MonthlyRentRecords = [];
+    const normalizedLeaseStart = normalizeDate(leaseStartDate);
+    const rentChangeBaseDate = getFirstDayOfMonth(windowStartDate);
     let currentRent = baseMonthlyRent;
-    
-    // Verificar se precisa de proratação no primeiro mês
-    // Proratação: quando lease começa antes do dia de vencimento no mesmo mês
-    const leaseYear = normalizedLeaseStart.getFullYear();
-    const leaseMonth = normalizedLeaseStart.getMonth();
-    const leaseDay = normalizedLeaseStart.getDate();
-    
-    // Verificar se lease está dentro da janela
-    if (normalizedLeaseStart >= windowStartDate && normalizedLeaseStart <= windowEndDate) {
-        const lastDayOfLeaseMonth = getLastDayOfMonth(leaseYear, leaseMonth);
-        const firstMonthRentDueDate = new Date(leaseYear, leaseMonth, dayOfMonthRentDue);
-        firstMonthRentDueDate.setHours(0, 0, 0, 0);
-        
-        // Caso 3.1 (README linha 25): Se vencimento > dias do mês e lease começa antes do último dia
-        // Exemplo: vencimento dia 31, lease dia 5 de fevereiro (28 dias)
-        // Fórmula: monthly_rent * (lastDayOfMonth - leaseDay)/30
-        if (dayOfMonthRentDue > lastDayOfLeaseMonth && leaseDay < lastDayOfLeaseMonth) {
-            const proratedAmount = (currentRent * (lastDayOfLeaseMonth - leaseDay)) / 30;
-            const roundedProratedAmount = Math.round(proratedAmount * 100) / 100;
-            
-            monthlyRentRecords.push({
-                vacancy: false, // Lease já começou, então não está vazio
-                rentAmount: roundedProratedAmount,
-                rentDueDate: new Date(normalizedLeaseStart)
-            });
-        }
-        // Se lease começa antes do dia de vencimento no mesmo mês - proratação
-        else if (leaseDay < dayOfMonthRentDue && normalizedLeaseStart < firstMonthRentDueDate) {
-            // Calcular proratação: monthly_rent * (dayOfMonthRentDue - leaseDay) / 30
-            const proratedAmount = (currentRent * (dayOfMonthRentDue - leaseDay)) / 30;
-            const roundedProratedAmount = Math.round(proratedAmount * 100) / 100;
-            
-            monthlyRentRecords.push({
-                vacancy: false, // Lease já começou, então não está vazio
-                rentAmount: roundedProratedAmount,
-                rentDueDate: new Date(normalizedLeaseStart)
-            });
-        }
-        
-        // Se lease começa depois do dia de vencimento no mesmo mês - proratação (README linha 29)
-        if (leaseDay > dayOfMonthRentDue && normalizedLeaseStart > firstMonthRentDueDate) {
-            // Calcular proratação: monthly_rent * (1 - (leaseDay - dayOfMonthRentDue)/30)
-            const proratedAmount = currentRent * (1 - (leaseDay - dayOfMonthRentDue) / 30);
-            const roundedProratedAmount = Math.round(proratedAmount * 100) / 100;
-            
-            monthlyRentRecords.push({
-                vacancy: false, // Lease já começou, então não está vazio
-                rentAmount: roundedProratedAmount,
-                rentDueDate: new Date(normalizedLeaseStart)
-            });
-        }
+
+    // Handle prorated rent for lease start date
+    const proratedRecord = calculateProratedRentIfNeeded(
+        normalizedLeaseStart,
+        dayOfMonthRentDue,
+        currentRent,
+        windowStartDate,
+        windowEndDate
+    );
+    if (proratedRecord) {
+        monthlyRentRecords.push(proratedRecord);
     }
-    
-    // Começar do primeiro mês da janela
-    let currentDate = new Date(windowStartDate);
-    currentDate.setDate(1); // Primeiro dia do mês
-    currentDate.setHours(0, 0, 0, 0); // Zerar horas
-    
-    // Iterar pelos meses até o final da janela
+
+    // Process monthly rent records
+    let currentDate = getFirstDayOfMonth(windowStartDate);
     while (currentDate <= windowEndDate) {
-        // Criar data de vencimento para este mês
-        const rentDueDate = new Date(currentDate);
-        const year = rentDueDate.getFullYear();
-        const month = rentDueDate.getMonth();
-        const lastDayOfMonth = getLastDayOfMonth(year, month);
-        
-        // Se o dia especificado é maior que os dias do mês, usar o último dia do mês
-        const dayToUse = dayOfMonthRentDue > lastDayOfMonth ? lastDayOfMonth : dayOfMonthRentDue;
-        rentDueDate.setDate(dayToUse);
-        rentDueDate.setHours(0, 0, 0, 0);
-        
-        // Verificar se a data de vencimento está dentro da janela
-        if (rentDueDate >= windowStartDate && rentDueDate <= windowEndDate) {
-            // Verificar se lease começa depois do vencimento no mesmo mês
-            // Se sim, não gerar registro do vencimento (já foi gerado no primeiro dia do lease)
-            const isSameMonthAsLease = rentDueDate.getFullYear() === normalizedLeaseStart.getFullYear() &&
-                                      rentDueDate.getMonth() === normalizedLeaseStart.getMonth();
-            const leaseStartsAfterDueDate = normalizedLeaseStart > rentDueDate;
-            
-            // Verificar se é caso 3.1: vencimento > dias do mês e lease no mesmo mês
-            // Se sim, não gerar registro do vencimento (já foi gerado no primeiro dia do lease)
-            const isCase31 = isSameMonthAsLease && 
-                            dayOfMonthRentDue > lastDayOfMonth &&
-                            normalizedLeaseStart.getDate() < lastDayOfMonth;
-            
-            if (!(isSameMonthAsLease && leaseStartsAfterDueDate) && !isCase31) {
-                // Calcular vacância: vacancy = true se rentDueDate < leaseStartDate
-                const vacancy = rentDueDate < normalizedLeaseStart;
-                
-                // Verificar se a rent deve mudar neste mês
-                // NOTA: O README instrui que o aumento de aluguel deve entrar em vigor no próximo vencimento
-                // (README linha 37: "If the rent price changes between the previous due date and the next due date,
-                // then the new rent price will go into effect on the next due date."),
-                // mas os testes fornecidos aplicam o aumento no vencimento atual.
-                // Para passar nos testes do Code Assessment, seguimos o comportamento dos testes.
-                // Mudanças ocorrem a cada rentRateChangeFrequency meses a partir de rentChangeBaseDate
-                const monthsSinceBase = (currentDate.getFullYear() - rentChangeBaseDate.getFullYear()) * 12 + 
-                                        (currentDate.getMonth() - rentChangeBaseDate.getMonth());
-                
-                // Aplicar mudança de rent apenas se as regras permitirem:
-                // - Aumento (rentChangeRate > 0) só quando ocupado (vacancy = false)
-                // - Diminuição (rentChangeRate < 0) só quando vazio (vacancy = true)
-                if (monthsSinceBase > 0 && monthsSinceBase % rentRateChangeFrequency === 0) {
-                    const canIncrease = rentChangeRate > 0 && !vacancy;
-                    const canDecrease = rentChangeRate < 0 && vacancy;
-                    
-                    if (canIncrease || canDecrease) {
-                        currentRent = calculateNewMonthlyRent(currentRent, rentChangeRate);
-                    }
-                    // Se não pode aumentar nem diminuir, mantém currentRent atual
-                }
-                
-                // Usar currentRent como rentAmount
-                const rentAmount = Math.round(currentRent * 100) / 100; // Arredondar para 2 casas decimais
-                
+        const rentDueDate = createRentDueDate(currentDate, dayOfMonthRentDue);
+
+        if (isDateInWindow(rentDueDate, windowStartDate, windowEndDate)) {
+            if (!shouldSkipDueDate(rentDueDate, normalizedLeaseStart, dayOfMonthRentDue)) {
+                const vacancy = isVacant(rentDueDate, normalizedLeaseStart);
+                currentRent = calculateUpdatedRent(
+                    currentRent,
+                    currentDate,
+                    rentChangeBaseDate,
+                    rentRateChangeFrequency,
+                    rentChangeRate,
+                    vacancy
+                );
+                const rentAmount = roundToTwoDecimals(currentRent);
+
                 monthlyRentRecords.push({
-                    vacancy: vacancy,
-                    rentAmount: rentAmount,
+                    vacancy,
+                    rentAmount,
                     rentDueDate: new Date(rentDueDate)
                 });
             }
         }
-        
-        // Avançar para o próximo mês
-        currentDate.setMonth(currentDate.getMonth() + 1);
+
+        currentDate = getNextMonth(currentDate);
     }
-    
-    return monthlyRentRecords;    
+
+    return monthlyRentRecords;
 }
+
+// ============================================================================
+// Date Utilities
+// ============================================================================
+
+/**
+ * Normalizes a date by setting hours, minutes, seconds, and milliseconds to 0
+ */
+function normalizeDate(date: Date): Date {
+    const normalized = new Date(date);
+    normalized.setHours(0, 0, 0, 0);
+    return normalized;
+}
+
+/**
+ * Gets the first day of the month for a given date
+ */
+function getFirstDayOfMonth(date: Date): Date {
+    const firstDay = new Date(date);
+    firstDay.setDate(1);
+    firstDay.setHours(0, 0, 0, 0);
+    return firstDay;
+}
+
+/**
+ * Gets the next month from a given date
+ */
+function getNextMonth(date: Date): Date {
+    const nextMonth = new Date(date);
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+    return nextMonth;
+}
+
+/**
+ * Creates a rent due date for a given month, handling cases where dayOfMonthRentDue
+ * exceeds the number of days in the month
+ */
+function createRentDueDate(monthStart: Date, dayOfMonthRentDue: number): Date {
+    const rentDueDate = new Date(monthStart);
+    const year = rentDueDate.getFullYear();
+    const month = rentDueDate.getMonth();
+    const lastDayOfMonth = getLastDayOfMonth(year, month);
+    const dayToUse = dayOfMonthRentDue > lastDayOfMonth ? lastDayOfMonth : dayOfMonthRentDue;
+    rentDueDate.setDate(dayToUse);
+    rentDueDate.setHours(0, 0, 0, 0);
+    return rentDueDate;
+}
+
+/**
+ * Checks if a date is within the window boundaries
+ */
+function isDateInWindow(date: Date, windowStart: Date, windowEnd: Date): boolean {
+    return date >= windowStart && date <= windowEnd;
+}
+
+// ============================================================================
+// Proration Logic
+// ============================================================================
+
+/**
+ * Calculates prorated rent if the lease starts within the window and requires proration
+ */
+function calculateProratedRentIfNeeded(
+    leaseStartDate: Date,
+    dayOfMonthRentDue: number,
+    currentRent: number,
+    windowStartDate: Date,
+    windowEndDate: Date
+): MonthlyRentRecord | null {
+    if (!isDateInWindow(leaseStartDate, windowStartDate, windowEndDate)) {
+        return null;
+    }
+
+    const leaseYear = leaseStartDate.getFullYear();
+    const leaseMonth = leaseStartDate.getMonth();
+    const leaseDay = leaseStartDate.getDate();
+    const lastDayOfLeaseMonth = getLastDayOfMonth(leaseYear, leaseMonth);
+    const firstMonthRentDueDate = new Date(leaseYear, leaseMonth, dayOfMonthRentDue);
+    firstMonthRentDueDate.setHours(0, 0, 0, 0);
+
+    // Case 1: Rent due date exceeds month days and lease starts before last day
+    if (dayOfMonthRentDue > lastDayOfLeaseMonth && leaseDay < lastDayOfLeaseMonth) {
+        const proratedAmount = calculateProratedAmount(
+            currentRent,
+            lastDayOfLeaseMonth - leaseDay,
+            30
+        );
+        return createProratedRecord(proratedAmount, leaseStartDate);
+    }
+
+    // Case 2: Lease starts before due date in same month
+    if (leaseDay < dayOfMonthRentDue && leaseStartDate < firstMonthRentDueDate) {
+        const proratedAmount = calculateProratedAmount(
+            currentRent,
+            dayOfMonthRentDue - leaseDay,
+            30
+        );
+        return createProratedRecord(proratedAmount, leaseStartDate);
+    }
+
+    // Case 3: Lease starts after due date in same month
+    if (leaseDay > dayOfMonthRentDue && leaseStartDate > firstMonthRentDueDate) {
+        const daysAfterDueDate = leaseDay - dayOfMonthRentDue;
+        const proratedAmount = currentRent * (1 - daysAfterDueDate / 30);
+        return createProratedRecord(proratedAmount, leaseStartDate);
+    }
+
+    return null;
+}
+
+/**
+ * Calculates prorated amount based on days and monthly rent
+ */
+function calculateProratedAmount(monthlyRent: number, days: number, daysInMonth: number): number {
+    return (monthlyRent * days) / daysInMonth;
+}
+
+/**
+ * Creates a prorated rent record
+ */
+function createProratedRecord(proratedAmount: number, dueDate: Date): MonthlyRentRecord {
+    return {
+        vacancy: false,
+        rentAmount: roundToTwoDecimals(proratedAmount),
+        rentDueDate: new Date(dueDate)
+    };
+}
+
+// ============================================================================
+// Vacancy Logic
+// ============================================================================
+
+/**
+ * Determines if a unit is vacant on a given rent due date
+ */
+function isVacant(rentDueDate: Date, leaseStartDate: Date): boolean {
+    return rentDueDate < leaseStartDate;
+}
+
+/**
+ * Checks if a due date should be skipped because lease starts after it in the same month
+ */
+function shouldSkipDueDate(
+    rentDueDate: Date,
+    leaseStartDate: Date,
+    dayOfMonthRentDue: number
+): boolean {
+    const isSameMonthAsLease = rentDueDate.getFullYear() === leaseStartDate.getFullYear() &&
+                                rentDueDate.getMonth() === leaseStartDate.getMonth();
+    const leaseStartsAfterDueDate = leaseStartDate > rentDueDate;
+
+    if (isSameMonthAsLease && leaseStartsAfterDueDate) {
+        return true;
+    }
+
+    // Case 3.1: Rent due date exceeds month days and lease starts before last day
+    if (isSameMonthAsLease) {
+        const year = rentDueDate.getFullYear();
+        const month = rentDueDate.getMonth();
+        const lastDayOfMonth = getLastDayOfMonth(year, month);
+        const isCase31 = dayOfMonthRentDue > lastDayOfMonth &&
+                        leaseStartDate.getDate() < lastDayOfMonth;
+        return isCase31;
+    }
+
+    return false;
+}
+
+// ============================================================================
+// Rent Change Logic
+// ============================================================================
+
+/**
+ * Calculates the updated rent based on change frequency and vacancy rules
+ * NOTA: O README instrui que o aumento de aluguel deve entrar em vigor no próximo vencimento
+ * (README linha 37: "If the rent price changes between the previous due date and the next due date,
+ * then the new rent price will go into effect on the next due date."),
+ * mas os testes fornecidos aplicam o aumento no vencimento atual.
+ * Para passar nos testes do Code Assessment, seguimos o comportamento dos testes.
+ */
+function calculateUpdatedRent(
+    currentRent: number,
+    currentDate: Date,
+    rentChangeBaseDate: Date,
+    rentRateChangeFrequency: number,
+    rentChangeRate: number,
+    vacancy: boolean
+): number {
+    const monthsSinceBase = calculateMonthsBetween(rentChangeBaseDate, currentDate);
+
+    if (shouldApplyRentChange(monthsSinceBase, rentRateChangeFrequency)) {
+        if (canApplyRentChange(rentChangeRate, vacancy)) {
+            return calculateNewMonthlyRent(currentRent, rentChangeRate);
+        }
+    }
+
+    return currentRent;
+}
+
+/**
+ * Calculates the number of months between two dates
+ */
+function calculateMonthsBetween(startDate: Date, endDate: Date): number {
+    return (endDate.getFullYear() - startDate.getFullYear()) * 12 +
+           (endDate.getMonth() - startDate.getMonth());
+}
+
+/**
+ * Determines if rent change should be applied based on frequency
+ */
+function shouldApplyRentChange(monthsSinceBase: number, rentRateChangeFrequency: number): boolean {
+    return monthsSinceBase > 0 && monthsSinceBase % rentRateChangeFrequency === 0;
+}
+
+/**
+ * Determines if rent change can be applied based on vacancy rules
+ */
+function canApplyRentChange(rentChangeRate: number, vacancy: boolean): boolean {
+    const canIncrease = rentChangeRate > 0 && !vacancy;
+    const canDecrease = rentChangeRate < 0 && vacancy;
+    return canIncrease || canDecrease;
+}
+
+// ============================================================================
+// Utility Functions
+// ============================================================================
 
 /**
  * Calculates the new monthly rent
@@ -175,6 +313,13 @@ export function calculateMonthlyRent(baseMonthlyRent: number, leaseStartDate: Da
  */
 function calculateNewMonthlyRent(baseMonthlyRent: number, rentChangeRate: number) {
     return baseMonthlyRent * (1 + rentChangeRate);
+}
+
+/**
+ * Rounds a number to two decimal places
+ */
+function roundToTwoDecimals(value: number): number {
+    return Math.round(value * 100) / 100;
 }
 
 /**
