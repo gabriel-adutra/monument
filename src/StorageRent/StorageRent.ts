@@ -26,7 +26,7 @@ export function calculateMonthlyRent(baseMonthlyRent: number, leaseStartDate: Da
     //(1)
     const monthlyRentRecords: MonthlyRentRecords = [];
     const normalizedLeaseStart = normalizeDate(leaseStartDate);
-    const rentChangeBaseDate = getFirstDayOfMonth(windowStartDate); //reference point to count how many months have passed. Based on this count, the system knows when a rent change should be applied.
+    const rentChangeBaseDate = getFirstDayOfMonth(windowStartDate);
     let currentRent = baseMonthlyRent;
 
     // Handle prorated rent for lease start date
@@ -68,7 +68,7 @@ export function calculateMonthlyRent(baseMonthlyRent: number, leaseStartDate: Da
         currentDate = getNextMonth(currentDate);
     }
 
-    return monthlyRentRecords;
+    return monthlyRentRecords.sort((a, b) => a.rentDueDate.getTime() - b.rentDueDate.getTime());
 }
 
 // ============================================================================
@@ -140,20 +140,24 @@ function calculateProratedRentIfNeeded(leaseStartDate: Date, dayOfMonthRentDue: 
     const leaseMonth = leaseStartDate.getMonth();
     const leaseDay = leaseStartDate.getDate();
     const lastDayOfLeaseMonth = getLastDayOfMonth(leaseYear, leaseMonth);
-    const firstMonthRentDueDate = normalizeDate(new Date(leaseYear, leaseMonth, dayOfMonthRentDue));
+    const actualRentDueDay = dayOfMonthRentDue > lastDayOfLeaseMonth ? lastDayOfLeaseMonth : dayOfMonthRentDue;
+    const firstMonthRentDueDate = normalizeDate(new Date(leaseYear, leaseMonth, actualRentDueDay));
 
-    // Case 1: Rent due date exceeds month days and lease starts before last day
-    if (dayOfMonthRentDue > lastDayOfLeaseMonth && leaseDay < lastDayOfLeaseMonth) {
+    // Case 1: Rent due date exceeds month days and lease starts before last day (and NOT on the 1st day)
+    if (dayOfMonthRentDue > lastDayOfLeaseMonth && leaseDay < lastDayOfLeaseMonth && leaseDay > 1) {
         const proratedAmount = calculateProratedAmount(
             currentRent,
-            lastDayOfLeaseMonth - leaseDay,
+            lastDayOfLeaseMonth - leaseDay + 1,
             DAYS_IN_PRORATION_MONTH
         );
         return createProratedRecord(proratedAmount, leaseStartDate);
     }
 
     // Case 2: Lease starts before due date in same month
-    if (leaseDay < dayOfMonthRentDue && leaseStartDate < firstMonthRentDueDate) {
+    // Only apply if the due date is valid for this month (<= last day)
+    // If due date exceeds month days (e.g. 31st in April), it's treated as end-of-month,
+    // so starting on the 1st covers the full month (no proration needed).
+    if (leaseDay < dayOfMonthRentDue && leaseStartDate < firstMonthRentDueDate && dayOfMonthRentDue <= lastDayOfLeaseMonth) {
         const proratedAmount = calculateProratedAmount(
             currentRent,
             dayOfMonthRentDue - leaseDay,
@@ -163,7 +167,9 @@ function calculateProratedRentIfNeeded(leaseStartDate: Date, dayOfMonthRentDue: 
     }
 
     // Case 3: Lease starts after due date in same month
-    if (leaseDay > dayOfMonthRentDue && leaseStartDate > firstMonthRentDueDate) {
+    // Also handle case where due date was adjusted (e.g. 31st -> 30th) but lease started after adjusted date
+    // BUT: If lease started on day 1, it's a full month, so don't create a prorated record here
+    if (leaseDay > 1 && leaseDay > dayOfMonthRentDue && leaseStartDate > firstMonthRentDueDate) {
         const daysAfterDueDate = leaseDay - dayOfMonthRentDue;
         const proratedAmount = calculateRemainingProratedAmount(currentRent, daysAfterDueDate, DAYS_IN_PRORATION_MONTH);
         return createProratedRecord(proratedAmount, leaseStartDate);
@@ -224,12 +230,11 @@ function shouldSkipDueDate(rentDueDate: Date, leaseStartDate: Date, dayOfMonthRe
         return true;
     }
 
-    // Case 3.1: Rent due date exceeds month days and lease starts before last day
+    // Case 3.1: Rent due date exceeds month days and lease starts before last day (and NOT on the 1st day)
     const year = rentDueDate.getFullYear();
     const month = rentDueDate.getMonth();
     const lastDayOfMonth = getLastDayOfMonth(year, month);
-    const isCase31 = dayOfMonthRentDue > lastDayOfMonth &&
-                    leaseStartDate.getDate() < lastDayOfMonth;
+    const isCase31 = dayOfMonthRentDue > lastDayOfMonth && leaseStartDate.getDate() < lastDayOfMonth && leaseStartDate.getDate() > 1;
     return isCase31;
 }
 

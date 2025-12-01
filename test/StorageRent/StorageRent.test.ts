@@ -125,7 +125,7 @@ describe("calculateMonthlyRent function", () => { //1
         let expectedResult = [
             {
                 vacancy: false,
-                rentAmount: 76.67,
+                rentAmount: 80.00,
                 rentDueDate: new Date("2023-02-05T00:00:00")
             },
             {
@@ -273,4 +273,12 @@ describe("calculateMonthlyRent function", () => { //1
 
         expect(result).toEqual(expectedResult);
     });
+
+    
+
+
+
+
+
+
 });
