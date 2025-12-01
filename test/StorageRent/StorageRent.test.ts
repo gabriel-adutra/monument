@@ -1,6 +1,6 @@
 import { calculateMonthlyRent, MonthlyRentRecord, MonthlyRentRecords } from "../../src/StorageRent/StorageRent";
 
-describe("calculateMonthlyRent function", () => {
+describe("calculateMonthlyRent function", () => { //1
   
     it("should return MonthlyRentRecords", () => {
         const baseMonthlyRent = 100.00;
@@ -36,7 +36,7 @@ describe("calculateMonthlyRent function", () => {
         expect(result).toEqual(expectedResult);
     });
 
-    it("should return MonthlyRentRecords validate first payment due date and first month pro-rate when lease start is before monthly due date", () => {
+    it("should return MonthlyRentRecords validate first payment due date and first month pro-rate when lease start is before monthly due date", () => { //2
         const baseMonthlyRent = 100.00;
         const leaseStartDate = new Date("2023-01-01T00:00:00");
         const windowStartDate = new Date("2023-01-01T00:00:00");
@@ -75,7 +75,7 @@ describe("calculateMonthlyRent function", () => {
         expect(result).toEqual(expectedResult);
       });
 
-    it("should validate README example where rent increase is delayed due to initial vacancy", () => {
+    it("should validate README example where rent increase is delayed due to initial vacancy", () => {//3
         const baseMonthlyRent = 100.00;
         const leaseStartDate = new Date("2023-02-01T00:00:00");
         const windowStartDate = new Date("2023-01-01T00:00:00");
@@ -109,7 +109,7 @@ describe("calculateMonthlyRent function", () => {
         expect(result).toEqual(expectedResult);
     });
 
-    it("should handle rent due date > days in month and lease starts before last day (proration case 1)", () => {
+    it("should handle rent due date > days in month and lease starts before last day (proration case 1)", () => {//4
         const baseMonthlyRent = 100.00;
         const leaseStartDate = new Date("2023-02-05T00:00:00");
         const windowStartDate = new Date("2023-02-01T00:00:00");
@@ -138,7 +138,7 @@ describe("calculateMonthlyRent function", () => {
         expect(result).toEqual(expectedResult);
     });
 
-    it("should handle lease starting after due date in same month (proration case 3)", () => {
+    it("should handle lease starting after due date in same month (proration case 3)", () => {//5
         const baseMonthlyRent = 100.00;
         const leaseStartDate = new Date("2023-01-20T00:00:00");
         const windowStartDate = new Date("2023-01-01T00:00:00");
@@ -167,7 +167,7 @@ describe("calculateMonthlyRent function", () => {
         expect(result).toEqual(expectedResult);
     });
 
-    it("should change rent every X months based on rentRateChangeFrequency (README case)", () => {
+    it("should change rent every X months based on rentRateChangeFrequency (README case)", () => {//6
         const baseMonthlyRent = 100.00;
         const leaseStartDate = new Date("2023-01-01T00:00:00");
         const windowStartDate = new Date("2023-01-01T00:00:00");
@@ -216,7 +216,7 @@ describe("calculateMonthlyRent function", () => {
         expect(result).toEqual(expectedResult);
     });
 
-    it("should decrease rent when unit is vacant (rentChangeRate negative)", () => {
+    it("should decrease rent when unit is vacant (rentChangeRate negative)", () => {//7
         const baseMonthlyRent = 100.00;
         const leaseStartDate = new Date("2023-04-01T00:00:00");
         const windowStartDate = new Date("2023-01-01T00:00:00");
@@ -250,7 +250,7 @@ describe("calculateMonthlyRent function", () => {
         expect(result).toEqual(expectedResult);
     });
 
-    it("should handle leap year correctly (February 2024 with 29 days)", () => {
+    it("should handle leap year correctly (February 2024 with 29 days)", () => {//8
         const baseMonthlyRent = 100.00;
         const leaseStartDate = new Date("2024-01-01T00:00:00");
         const windowStartDate = new Date("2024-02-01T00:00:00");

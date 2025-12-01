@@ -22,9 +22,11 @@ const DAYS_IN_PRORATION_MONTH = 30;
  * @returns Array<MonthlyRentRecord>;
  */
 export function calculateMonthlyRent(baseMonthlyRent: number, leaseStartDate: Date, windowStartDate: Date, windowEndDate: Date, dayOfMonthRentDue: number, rentRateChangeFrequency: number, rentChangeRate: number): MonthlyRentRecords {
+
+    //(1)
     const monthlyRentRecords: MonthlyRentRecords = [];
     const normalizedLeaseStart = normalizeDate(leaseStartDate);
-    const rentChangeBaseDate = getFirstDayOfMonth(windowStartDate);
+    const rentChangeBaseDate = getFirstDayOfMonth(windowStartDate); //reference point to count how many months have passed. Based on this count, the system knows when a rent change should be applied.
     let currentRent = baseMonthlyRent;
 
     // Handle prorated rent for lease start date
@@ -34,18 +36,18 @@ export function calculateMonthlyRent(baseMonthlyRent: number, leaseStartDate: Da
         monthlyRentRecords.push(proratedRecord);
     }
 
-    // Process monthly rent records
+    //(2) 
     let currentDate = getFirstDayOfMonth(windowStartDate);
     let previousVacancy: boolean | null = null;
-
+    //(3)
     while (currentDate <= windowEndDate) {
         const rentDueDate = createRentDueDate(currentDate, dayOfMonthRentDue);
-
+        //(4)
         if (isDateInWindow(rentDueDate, windowStartDate, windowEndDate)) {
             if (!shouldSkipDueDate(rentDueDate, normalizedLeaseStart, dayOfMonthRentDue)) {
                 const vacancy = isVacant(rentDueDate, normalizedLeaseStart);
                 
-                // Calculate rent change for NEXT period based on PREVIOUS period's vacancy
+                //(5)
                 const monthsSinceBase = calculateMonthsBetween(rentChangeBaseDate, currentDate);
                 if (shouldApplyRentChange(monthsSinceBase, rentRateChangeFrequency)) {
                     // Use previousVacancy if available, otherwise use current vacancy
@@ -55,14 +57,14 @@ export function calculateMonthlyRent(baseMonthlyRent: number, leaseStartDate: Da
                         currentRent = calculateNewMonthlyRent(currentRent, rentChangeRate);
                     }
                 }
-
+                //(6)
                 const rentAmount = roundToTwoDecimals(currentRent);
                 monthlyRentRecords.push({vacancy, rentAmount, rentDueDate: new Date(rentDueDate)});
                 
                 previousVacancy = vacancy;
             }
         }
-
+        //(7)
         currentDate = getNextMonth(currentDate);
     }
 
